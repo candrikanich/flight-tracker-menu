@@ -1,0 +1,38 @@
+# Generate with: xcodegen --spec Xcode/project.yml   (FLIGHT_TEAM_ID must be set)
+name: FlightOverhead
+options:
+  bundleIdPrefix: com.andrikanich
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  FlightKit:
+    path: ../FlightKit
+targets:
+  FlightOverhead:
+    type: application
+    platform: macOS
+    sources: [../App]
+    dependencies:
+      - package: FlightKit
+    info:
+      path: ../App/Info.plist
+      properties:
+        CFBundleDisplayName: Flight Overhead
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.utilities
+    entitlements:
+      path: ../App/FlightOverhead.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andrikanich.FlightOverhead
+        PRODUCT_NAME: FlightOverhead
+        DEVELOPMENT_TEAM: ${FLIGHT_TEAM_ID}
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
