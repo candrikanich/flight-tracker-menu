@@ -49,6 +49,19 @@ func fixture(_ name: String) throws -> Data {
         #expect(!aircraft.contains { $0.hex == "abcdef" })
     }
 
+    @Test func absurdAltitudeDropsOnlyThatRecordInsteadOfCrashing() throws {
+        let json = """
+        {"aircraft":[
+          {"hex":"bad1","alt_baro":1e300,"lat":41.4,"lon":-81.8},
+          {"hex":"bad2","alt_baro":-99999999999999,"lat":41.4,"lon":-81.8},
+          {"hex":"good","alt_baro":3000.4,"lat":41.4,"lon":-81.8}
+        ]}
+        """
+        let decoded = try FeedDecoding.aircraft(from: Data(json.utf8))
+        #expect(decoded.map(\.hex) == ["good"])
+        #expect(decoded.first?.altitudeFeet == 3_000)
+    }
+
     @Test func malformedJSONThrows() {
         #expect(throws: (any Error).self) {
             try FeedDecoding.aircraft(from: Data("{".utf8))

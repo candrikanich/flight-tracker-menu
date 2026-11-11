@@ -66,15 +66,19 @@ private enum Altitude: Decodable {
     case feet(Int)
     case ground
 
+    /// Anything outside this is corrupt feed data; rejecting it also keeps the Int conversion from trapping.
+    static let plausibleFeet = -2_000.0...100_000.0
+
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if let value = try? container.decode(Int.self) {
-            self = .feet(value)
-        } else if let value = try? container.decode(Double.self) {
-            self = .feet(Int(value.rounded()))
-        } else {
+        guard let value = try? container.decode(Double.self) else {
             self = .ground
+            return
         }
+        guard Self.plausibleFeet.contains(value) else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Implausible altitude \(value)")
+        }
+        self = .feet(Int(value.rounded()))
     }
 
     var feet: Int? {
