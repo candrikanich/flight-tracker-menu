@@ -28,6 +28,7 @@ private struct Record: Decodable {
     let ownOp: String?
     let year: String?
     let altBaro: Altitude?
+    let altGeom: Altitude?
     let gs: Double?
     let baroRate: Int?
     let squawk: String?
@@ -38,7 +39,14 @@ private struct Record: Decodable {
     enum CodingKeys: String, CodingKey {
         case hex, flight, r, t, desc, ownOp, year, gs, squawk, category, lat, lon
         case altBaro = "alt_baro"
+        case altGeom = "alt_geom"
         case baroRate = "baro_rate"
+    }
+
+    /// GPS altitude is within ~150 ft of sea-level height over the US; pressure altitude isn't corrected for
+    /// the day's air pressure and can be off by ~1,000 ft. "ground" from the transponder always wins.
+    private var altitudeFeet: Int? {
+        altBaro?.feet.map { baro in altGeom?.feet ?? baro }
     }
 
     var aircraft: Aircraft? {
@@ -51,7 +59,7 @@ private struct Record: Decodable {
             typeDescription: desc.nonBlank,
             operatorName: ownOp.nonBlank,
             yearBuilt: year.nonBlank.flatMap(Int.init),
-            altitudeFeet: altBaro?.feet,
+            altitudeFeet: altitudeFeet,
             groundSpeedKnots: gs.flatMap { (0...2_000).contains($0) ? $0 : nil },
             verticalRateFpm: baroRate,
             squawk: squawk.nonBlank,

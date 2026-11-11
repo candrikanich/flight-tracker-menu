@@ -19,6 +19,8 @@ public final class FlightTracker {
     static let reannounceAfter: TimeInterval = 120
     /// A failed route lookup is not retried sooner than this, so a struggling source isn't hit every poll.
     static let routeRetryAfter: TimeInterval = 60
+    /// Free route databases get corrected, and a flight number can fly a different route another day.
+    static let routeCacheLifetime: TimeInterval = 6 * 3_600
     static let backoff: [Duration] = [.seconds(5), .seconds(10), .seconds(20), .seconds(60)]
 
     public private(set) var current: Sighting?
@@ -39,10 +41,10 @@ public final class FlightTracker {
     @ObservationIgnored private var criteria = NearbyCriteria()
     @ObservationIgnored private var quietHours = QuietHours.default
     @ObservationIgnored private var consecutiveFailures = 0
-    /// nil value = looked up, no route found. Missing key = not looked up yet (or the lookup failed).
-    @ObservationIgnored private var routeCache: [String: Route?] = [:]
+    /// nil route = looked up, no route found. Missing key = not looked up yet (or the lookup failed).
+    @ObservationIgnored private var routeCache: [String: (route: Route?, at: Date)] = [:]
     @ObservationIgnored private var routeFailedAt: [String: Date] = [:]
-    @ObservationIgnored private var lastCurrentAt: [String: Date] = [:]
+    @ObservationIgnored private var lastInRangeAt: [String: Date] = [:]
     @ObservationIgnored private var loop: Task<Void, Never>?
 
     public init(
@@ -101,14 +103,15 @@ public final class FlightTracker {
             return
         }
 
-        guard let nearby = Nearby.closest(in: aircraft, home: home, criteria: criteria) else {
+        let inRange = Nearby.qualifying(in: aircraft, home: home, criteria: criteria)
+        guard let nearby = inRange.min(by: { $0.distanceMiles < $1.distanceMiles }) else {
             current = nil
             return
         }
 
-        let hex = nearby.aircraft.hex
-        let isNewPass = lastCurrentAt[hex].map { time.timeIntervalSince($0) > Self.reannounceAfter } ?? true
-        lastCurrentAt[hex] = time
+        let isNewPass = lastInRangeAt[nearby.aircraft.hex]
+            .map { time.timeIntervalSince($0) > Self.reannounceAfter } ?? true
+        for plane in inRange { lastInRangeAt[plane.aircraft.hex] = time }
 
         let route = await route(for: nearby.aircraft, at: time)
         let sighting = Sighting(
@@ -124,7 +127,9 @@ public final class FlightTracker {
 
     private func route(for aircraft: Aircraft, at time: Date) async -> Route? {
         guard let callsign = aircraft.callsign else { return nil }
-        if let cached = routeCache[callsign] { return cached }
+        if let cached = routeCache[callsign], time.timeIntervalSince(cached.at) < Self.routeCacheLifetime {
+            return cached.route
+        }
         if let failedAt = routeFailedAt[callsign], time.timeIntervalSince(failedAt) < Self.routeRetryAfter {
             return nil
         }
@@ -132,7 +137,7 @@ public final class FlightTracker {
             let route = try await routes.route(
                 callsign: callsign, position: aircraft.coordinate, verticalRateFpm: aircraft.verticalRateFpm
             )
-            routeCache[callsign] = .some(route)
+            routeCache[callsign] = (route, time)
             routeFailedAt[callsign] = nil
             return route
         } catch {

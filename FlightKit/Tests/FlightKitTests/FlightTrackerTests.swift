@@ -142,6 +142,39 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         #expect(announcements == 2)
     }
 
+    @Test func planeStillInRangeWhileAnotherIsCloserIsNotAnnouncedAgain() async {
+        let tracker = makeTracker()
+        var announced: [String] = []
+        tracker.onNewPlane = { announced.append($0.plane.aircraft.hex) }
+
+        serveFeed([("heli", "N12345", 1_000, 1.0)])
+        await tracker.tick()
+        for _ in 0..<36 {
+            clock.advance(5)
+            serveFeed([("heli", "N12345", 1_000, 1.0), ("jet", "N67890", 2_000, 0.2)])
+            await tracker.tick()
+        }
+        clock.advance(5)
+        serveFeed([("heli", "N12345", 1_000, 1.0)])
+        await tracker.tick()
+
+        #expect(announced == ["heli", "jet"])
+    }
+
+    @Test func cachedRouteIsLookedUpAgainAfterSixHours() async throws {
+        serveFeed([("ual", "UAL1365", 2_000, 0.3)])
+        http.on("adsbdb.com", body: try fixture("adsbdb-unknown"))
+        let tracker = makeTracker()
+        await tracker.tick()
+        clock.advance(5 * 3_600)
+        await tracker.tick()
+        #expect(requestCount("adsbdb.com") == 1)
+
+        clock.advance(3_600 + 1)
+        await tracker.tick()
+        #expect(requestCount("adsbdb.com") == 2)
+    }
+
     @Test func missingRouteLeavesRouteNil() async {
         serveFeed([("ual", "UAL1365", 2_000, 0.3)])
         let tracker = makeTracker()

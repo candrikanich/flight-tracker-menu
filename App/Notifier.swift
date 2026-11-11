@@ -12,7 +12,7 @@ final class Notifier {
 
     func post(_ sighting: FlightTracker.Sighting) {
         let content = UNMutableNotificationContent()
-        content.title = String(Formatting.menuBarText(sighting.plane, route: sighting.route).dropFirst(2))
+        content.title = Formatting.summary(sighting.plane, route: sighting.route)
         content.body = sighting.route.map { route in
             "\(route.origin.city ?? route.origin.icao) → \(route.destination.city ?? route.destination.icao)"
         } ?? "route unknown"

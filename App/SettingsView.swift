@@ -28,6 +28,8 @@ private struct LocationSection: View {
     @State private var elevationFeet: Double?
     @State private var camera: MapCameraPosition = .automatic
     @State private var message: String?
+    /// One lookup at a time: a second click can't race the first and leave the wrong elevation behind.
+    @State private var lookingUpElevation = false
 
     private static let cleveland = CLLocationCoordinate2D(latitude: 41.4117, longitude: -81.8498)
 
@@ -35,7 +37,7 @@ private struct LocationSection: View {
         Section("Home location") {
             HStack {
                 TextField("Address", text: $address).onSubmit(findAddress)
-                Button("Find", action: findAddress).disabled(address.isEmpty)
+                Button("Find", action: findAddress).disabled(address.isEmpty || lookingUpElevation)
             }
             MapReader { proxy in
                 Map(position: $camera) {
@@ -46,10 +48,13 @@ private struct LocationSection: View {
                 }
             }
             .frame(height: 200)
+            .allowsHitTesting(!lookingUpElevation)
+            .opacity(lookingUpElevation ? 0.6 : 1)
             Text("Click the map to place or move your house.").font(.caption).foregroundStyle(.secondary)
             TextField("Ground elevation (ft)", value: $elevationFeet, format: .number.precision(.fractionLength(0)))
             if let message { Text(message).font(.caption).foregroundStyle(.secondary) }
-            Button("Save location", action: save).disabled(pin == nil || elevationFeet == nil)
+            Button("Save location", action: save)
+                .disabled(pin == nil || elevationFeet == nil || lookingUpElevation)
         }
         .onAppear(perform: loadSaved)
     }
@@ -78,9 +83,12 @@ private struct LocationSection: View {
     }
 
     private func setPin(_ coordinate: CLLocationCoordinate2D) {
+        guard !lookingUpElevation else { return }
         pin = coordinate
+        lookingUpElevation = true
         message = "Looking up ground elevation…"
         Task {
+            defer { lookingUpElevation = false }
             let client = ElevationClient(fetch: HTTP.urlSession)
             let target = Coordinate(latitude: coordinate.latitude, longitude: coordinate.longitude)
             if let feet = try? await client.groundElevationFeet(at: target) {
@@ -143,6 +151,8 @@ private struct NotificationsSection: View {
     let notifier: Notifier
     @State private var denied = false
 
+    private var cardIsTheAlert: Bool { settings.style == .autoOpenCard }
+
     var body: some View {
         Section("Notifications") {
             Toggle("Silent banner when a plane comes overhead", isOn: Binding(
@@ -159,6 +169,12 @@ private struct NotificationsSection: View {
                     }
                 }
             ))
+            .disabled(cardIsTheAlert)
+            if cardIsTheAlert {
+                let style = MenuBarStyle.autoOpenCard.title
+                Text("With \"\(style)\" the card opening is the alert, so no banners are sent.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if denied {
                 Text("Notifications are turned off for Flight Overhead in System Settings.")
                     .font(.caption).foregroundStyle(.secondary)

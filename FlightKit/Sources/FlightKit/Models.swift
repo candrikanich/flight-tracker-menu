@@ -102,5 +102,5 @@ public enum TrafficFilter: String, CaseIterable, Sendable, Codable {
 }
 
 public enum FlightPhase: Sendable, Equatable {
-    case arriving, departing, passingOver
+    case arriving, departing, passingOver, climbing, descending
 }

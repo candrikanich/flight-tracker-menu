@@ -54,6 +54,16 @@ import Testing
         #expect(Nearby.qualifies(vehicle, home: homeAtSeaLevel, criteria: everything) == nil)
     }
 
+    @Test func planeLessThanTwoHundredFeetAboveTheHouseDoesNotQualify() {
+        #expect(Nearby.qualifies(plane(altitudeFeet: 199, milesNorth: 0.2), home: homeAtSeaLevel, criteria: everything) == nil)
+        #expect(Nearby.qualifies(plane(altitudeFeet: 200, milesNorth: 0.2), home: homeAtSeaLevel, criteria: everything) != nil)
+    }
+
+    @Test func qualifyingListsEveryPlaneInView() {
+        let planes = [plane(hex: "a", milesNorth: 0.3), plane(hex: "b", milesNorth: 1.0), plane(hex: "c", milesNorth: 3.0)]
+        #expect(Nearby.qualifying(in: planes, home: homeAtSeaLevel, criteria: airportOnly).map(\.aircraft.hex) == ["a", "b"])
+    }
+
     @Test func closestPicksSmallestHorizontalDistance() {
         let far = plane(hex: "far", milesNorth: 1.2)
         let near = plane(hex: "near", milesNorth: 0.3)

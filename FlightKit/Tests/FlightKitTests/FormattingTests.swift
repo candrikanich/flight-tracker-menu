@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import FlightKit
 
@@ -77,5 +78,24 @@ import Testing
         #expect(Formatting.mph(knots: .infinity) == nil)
         #expect(Formatting.mph(knots: .nan) == nil)
         #expect(Formatting.mph(knots: 1e300) == nil)
+    }
+}
+
+@Suite struct SummaryAndLastSeenTests {
+    let near = NearbyPlane(aircraft: plane(), heightAboveHomeFeet: 2_100, distanceMiles: 0.4)
+
+    @Test func summaryHasNoSymbolAndMenuBarTextAddsIt() {
+        #expect(Formatting.summary(near, route: cleToEwr) == "UA1365 → EWR · 0.4 mi · 2,100 ft")
+        #expect(Formatting.menuBarText(near, route: cleToEwr) == "✈︎ UA1365 → EWR · 0.4 mi · 2,100 ft")
+    }
+
+    @Test func lastSeenIsCoarseAndDoesNotCountSeconds() {
+        let seen = Date(timeIntervalSince1970: 1_000_000)
+        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(5)) == "Last seen just now")
+        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(59)) == "Last seen just now")
+        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(60)) == "Last seen 1 min ago")
+        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(179)) == "Last seen 2 min ago")
+        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(3_600)) == "Last seen 1 hr ago")
+        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(3 * 3_600 + 1_000)) == "Last seen 3 hr ago")
     }
 }

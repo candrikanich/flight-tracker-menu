@@ -2,6 +2,8 @@ import Foundation
 
 public struct NearbyCriteria: Sendable, Equatable, Codable {
     public static let highAltitudeThresholdFeet = 10_000
+    /// Below this the plane is on or just off a runway, or the altitude is noise, not something flying over.
+    public static let minHeightAboveHomeFeet = 200
 
     public var filter: TrafficFilter
     public var radiusMiles: Double
@@ -28,15 +30,18 @@ public struct NearbyPlane: Sendable, Equatable {
 
 public enum Nearby {
     public static func closest(in aircraft: [Aircraft], home: Home, criteria: NearbyCriteria) -> NearbyPlane? {
-        aircraft
-            .compactMap { qualifies($0, home: home, criteria: criteria) }
-            .min { $0.distanceMiles < $1.distanceMiles }
+        qualifying(in: aircraft, home: home, criteria: criteria).min { $0.distanceMiles < $1.distanceMiles }
+    }
+
+    public static func qualifying(in aircraft: [Aircraft], home: Home, criteria: NearbyCriteria) -> [NearbyPlane] {
+        aircraft.compactMap { qualifies($0, home: home, criteria: criteria) }
     }
 
     public static func qualifies(_ aircraft: Aircraft, home: Home, criteria: NearbyCriteria) -> NearbyPlane? {
         guard let altitude = aircraft.altitudeFeet, aircraft.category?.hasPrefix("C") != true else { return nil }
 
         let height = Int((Double(altitude) - home.groundElevationFeet).rounded())
+        guard height >= NearbyCriteria.minHeightAboveHomeFeet else { return nil }
         let distance = Geo.distanceMiles(home.coordinate, aircraft.coordinate)
         let isHigh = height >= NearbyCriteria.highAltitudeThresholdFeet
 

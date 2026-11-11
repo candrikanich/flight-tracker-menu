@@ -9,8 +9,9 @@ public enum Phase {
         }
         guard let altitude = plane.altitudeFeet, altitude < NearbyCriteria.highAltitudeThresholdFeet,
               let rate = plane.verticalRateFpm else { return .passingOver }
-        if rate <= -climbOrDescentThresholdFpm { return .arriving }
-        if rate >= climbOrDescentThresholdFpm { return .departing }
+        // Without a route, a low descending plane is probably landing at CLE, but it could be Burke Lakefront.
+        if rate <= -climbOrDescentThresholdFpm { return .descending }
+        if rate >= climbOrDescentThresholdFpm { return .climbing }
         return .passingOver
     }
 }

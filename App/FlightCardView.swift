@@ -24,7 +24,9 @@ struct FlightCardView: View {
         if let sighting = tracker.current {
             SightingDetails(sighting: sighting, header: nil)
         } else if let sighting = tracker.lastSeen {
-            SightingDetails(sighting: sighting, header: lastSeenHeader(sighting.seenAt))
+            TimelineView(.everyMinute) { context in
+                SightingDetails(sighting: sighting, header: Formatting.lastSeen(sighting.seenAt, now: context.date))
+            }
         } else {
             Text(emptyMessage).foregroundStyle(.secondary)
         }
@@ -37,22 +39,18 @@ struct FlightCardView: View {
         case .idle: "No planes overhead yet."
         }
     }
-
-    private func lastSeenHeader(_ date: Date) -> Text {
-        Text("Last seen \(date, style: .relative) ago")
-    }
 }
 
 private struct SightingDetails: View {
     let sighting: FlightTracker.Sighting
-    let header: Text?
+    let header: String?
 
     private var aircraft: Aircraft { sighting.plane.aircraft }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let header {
-                header.font(.caption).foregroundStyle(.secondary)
+                Text(header).font(.caption).foregroundStyle(.secondary)
             }
             if let emergency = emergencyText {
                 Label(emergency, systemImage: "exclamationmark.triangle.fill")
@@ -101,6 +99,8 @@ private struct SightingDetails: View {
         case .arriving: "Arriving CLE"
         case .departing: "Departing CLE"
         case .passingOver: "Passing over"
+        case .climbing: "Climbing"
+        case .descending: "Descending"
         }
     }
 

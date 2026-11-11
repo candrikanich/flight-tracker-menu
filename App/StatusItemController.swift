@@ -82,12 +82,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         button.image = image
         button.alphaValue = tracker.status == .offline ? 0.4 : 1
         button.contentTintColor = nil
-        button.title = ""
+        button.attributedTitle = NSAttributedString()
 
         if let current {
             switch settings.style {
             case .liveText:
-                button.title = String(Formatting.menuBarText(current.plane, route: current.route).dropFirst(2))
+                button.attributedTitle = Self.steadyTitle(Formatting.summary(current.plane, route: current.route))
             case .quietIcon:
                 button.contentTintColor = .controlAccentColor
             case .autoOpenCard:
@@ -97,6 +97,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         } else if openedAutomatically, popover.isShown {
             scheduleAutoClose()
         }
+    }
+
+    /// Fixed-width numerals so the item doesn't change width, and nudge its neighbours, on every poll.
+    private static func steadyTitle(_ text: String) -> NSAttributedString {
+        let size = NSFont.menuBarFont(ofSize: 0).pointSize
+        let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .regular)
+        return NSAttributedString(string: " " + text, attributes: [.font: font])
     }
 
     private func scheduleAutoClose() {

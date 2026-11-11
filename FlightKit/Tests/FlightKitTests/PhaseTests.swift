@@ -14,12 +14,12 @@ import Testing
         #expect(Phase.classify(plane(altitudeFeet: 4_000, verticalRateFpm: -800), route: snaToEwr) == .passingOver)
     }
 
-    @Test func descendingLowPlaneWithoutRouteIsArriving() {
-        #expect(Phase.classify(plane(verticalRateFpm: -300), route: nil) == .arriving)
+    @Test func descendingLowPlaneWithoutRouteIsOnlyDescending() {
+        #expect(Phase.classify(plane(verticalRateFpm: -300), route: nil) == .descending)
     }
 
-    @Test func climbingLowPlaneWithoutRouteIsDeparting() {
-        #expect(Phase.classify(plane(verticalRateFpm: 300), route: nil) == .departing)
+    @Test func climbingLowPlaneWithoutRouteIsOnlyClimbing() {
+        #expect(Phase.classify(plane(verticalRateFpm: 300), route: nil) == .climbing)
     }
 
     @Test func levelLowPlaneWithoutRouteIsPassingOver() {

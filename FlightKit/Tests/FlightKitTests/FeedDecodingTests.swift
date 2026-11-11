@@ -21,7 +21,7 @@ func fixture(_ name: String) throws -> Data {
         #expect(united.typeCode == "B737")
         #expect(united.typeDescription == "BOEING 737-700")
         #expect(united.yearBuilt == 1999)
-        #expect(united.altitudeFeet == 39_000)
+        #expect(united.altitudeFeet == 39_400)
         #expect(united.groundSpeedKnots == 450.1)
         #expect(united.verticalRateFpm == 0)
         #expect(united.squawk == "1234")
@@ -60,6 +60,21 @@ func fixture(_ name: String) throws -> Data {
         let decoded = try FeedDecoding.aircraft(from: Data(json.utf8))
         #expect(decoded.map(\.hex) == ["good"])
         #expect(decoded.first?.altitudeFeet == 3_000)
+    }
+
+    @Test func geometricAltitudeIsPreferredOverPressureAltitude() throws {
+        let json = #"{"aircraft":[{"hex":"geo","alt_baro":2000,"alt_geom":2300,"lat":41.4,"lon":-81.8}]}"#
+        #expect(try FeedDecoding.aircraft(from: Data(json.utf8)).first?.altitudeFeet == 2_300)
+    }
+
+    @Test func pressureAltitudeIsUsedWhenThereIsNoGeometricAltitude() throws {
+        let json = #"{"aircraft":[{"hex":"baro","alt_baro":2000,"lat":41.4,"lon":-81.8}]}"#
+        #expect(try FeedDecoding.aircraft(from: Data(json.utf8)).first?.altitudeFeet == 2_000)
+    }
+
+    @Test func groundStaysOnTheGroundEvenWithGeometricAltitude() throws {
+        let json = #"{"aircraft":[{"hex":"taxi","alt_baro":"ground","alt_geom":800,"lat":41.4,"lon":-81.8}]}"#
+        #expect(try FeedDecoding.aircraft(from: Data(json.utf8)).first?.altitudeFeet == nil)
     }
 
     @Test func absurdGroundSpeedIsDiscarded() throws {
