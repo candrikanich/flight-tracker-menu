@@ -1,0 +1,31 @@
+{
+    "callsign": "UAL1365",
+    "number": "1365",
+    "airline_code": "UAL",
+    "airport_codes": "KSNA-KEWR",
+    "_airport_codes_iata": "SNA-EWR",
+    "_airports": [
+        {
+            "name": "John Wayne Airport-Orange County Airport",
+            "icao": "KSNA",
+            "iata": "SNA",
+            "location": "Santa Ana",
+            "countryiso2": "US",
+            "lat": 33.675701,
+            "lon": -117.867996,
+            "alt_feet": 56.0,
+            "alt_meters": 17.07
+        },
+        {
+            "name": "Newark Liberty International Airport",
+            "icao": "KEWR",
+            "iata": "EWR",
+            "location": "Newark",
+            "countryiso2": "US",
+            "lat": 40.692501,
+            "lon": -74.168701,
+            "alt_feet": 18.0,
+            "alt_meters": 5.49
+        }
+    ]
+}
