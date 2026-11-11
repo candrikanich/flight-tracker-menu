@@ -5,7 +5,7 @@ import Observation
 @Observable
 public final class FlightTracker {
     public enum Status: Equatable, Sendable {
-        case idle, quiet, offline
+        case idle, quiet, offline, needsHome
     }
 
     public struct Sighting: Equatable, Sendable {
@@ -82,7 +82,11 @@ public final class FlightTracker {
     }
 
     public func tick() async {
-        guard let home else { return }
+        guard let home else {
+            status = .needsHome
+            current = nil
+            return
+        }
         let time = now()
 
         if quietHours.isQuiet(at: time, calendar: calendar) {

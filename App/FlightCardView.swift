@@ -37,6 +37,7 @@ struct FlightCardView: View {
         case .quiet: "Quiet hours. Planes will show again when they end."
         case .offline: "Can't reach the flight feed right now."
         case .idle: "No planes overhead yet."
+        case .needsHome: "Set your home location in Settings, then click Save location."
         }
     }
 }

@@ -80,7 +80,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Flight Overhead")
         image?.isTemplate = true
         button.image = image
-        button.alphaValue = tracker.status == .offline ? 0.4 : 1
+        button.alphaValue = [.offline, .needsHome].contains(tracker.status) ? 0.4 : 1
         button.contentTintColor = nil
         button.attributedTitle = NSAttributedString()
 

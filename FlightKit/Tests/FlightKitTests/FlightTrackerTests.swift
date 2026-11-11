@@ -80,6 +80,16 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         #expect(tracker.current == nil)
     }
 
+    @Test func withoutAHomeTheTrackerSaysSoInsteadOfLookingIdle() async {
+        serveFeed([("near", "UAL2", 2_000, 0.3)])
+        let tracker = makeTracker()
+        tracker.configure(home: nil, criteria: NearbyCriteria(filter: .airport), quietHours: .default)
+        await tracker.tick()
+        #expect(http.requests.isEmpty)
+        #expect(tracker.status == .needsHome)
+        #expect(tracker.current == nil)
+    }
+
     @Test func failuresBackOffThenRecover() async {
         http.on("adsb.fi", status: 503)
         let tracker = makeTracker()
