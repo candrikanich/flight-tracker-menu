@@ -22,7 +22,6 @@
     - A: `GET https://api.adsbdb.com/v0/callsign/{CALLSIGN}` → `response.flightroute{airline{name,iata}, callsign_iata, origin{iata_code,icao_code,name,municipality,latitude,longitude}, destination{…}}`; 404 or `"response":"unknown callsign"` → none.
     - B: `GET https://vrs-standing-data.adsb.lol/routes/{first 2 chars}/{CALLSIGN}.json` (e.g. `/routes/UA/UAL1365.json`) → `{airline_code, _airport_codes_iata, _airports:[{name,icao,iata,location,lat,lon}, …]}`; first airport = origin, last = destination; 404 → none.
     - Use the first route (A, then B) that passes the plausibility check; otherwise `route unknown`.
-  - Photos: `GET https://api.planespotters.net/pub/photos/reg/{REG}` → `photos[0]{thumbnail_large.src, link, photographer}`. **Requires a descriptive `User-Agent` with a contact URL** or it returns 403.
   - Elevation: `GET https://epqs.nationalmap.gov/v1/json?x={lon}&y={lat}&units=Feet&wkid=4326` → `{"value": 781.64}`.
 - Feed queries send home coordinates rounded to 2 decimal places (~1 km) with a 12 nm radius; all distance filtering is on-device.
 - App Sandbox ON with `com.apple.security.network.client`. `LSUIElement = YES` (no Dock icon). Signed with Chris's Developer ID team; notarized; installed to `/Applications`.
@@ -45,7 +44,7 @@
 project.yml                                 XcodeGen spec (app target + local FlightKit package)
 FlightKit/Package.swift                     macOS 15 / iOS 18 library + tests
 FlightKit/Sources/FlightKit/
-  Models.swift          Aircraft, Airport, Route, AircraftPhoto, Home, TrafficFilter, FlightPhase, NearbyPlane
+  Models.swift          Aircraft, Airport, Route, Home, TrafficFilter, FlightPhase, NearbyPlane
   Geo.swift             distance, cross-track, elevation angle
   FeedDecoding.swift    adsb.fi JSON → [Aircraft]
   Nearby.swift          qualification + closest selection
@@ -54,7 +53,7 @@ FlightKit/Sources/FlightKit/
   Formatting.swift      menu-bar text, card strings
   QuietHours.swift      schedule check
   RouteDecoding.swift   adsbdb JSON → Route?, plausibility
-  Clients.swift         HTTP seam + feed/route/photo/elevation clients
+  Clients.swift         HTTP seam + feed/route/elevation clients
   FlightTracker.swift   @Observable polling state machine
 FlightKit/Tests/FlightKitTests/             one test file per source file + Fixtures/*.json
 App/
@@ -83,7 +82,6 @@ scripts/release.sh            archive, notarize, install
   - `struct Aircraft: Sendable, Equatable, Identifiable { let hex: String; let callsign: String?; let registration: String?; let typeCode: String?; let typeDescription: String?; let operatorName: String?; let yearBuilt: Int?; let altitudeFeet: Int?  /* nil when on ground */; let groundSpeedKnots: Double?; let verticalRateFpm: Int?; let squawk: String?; let category: String?; let coordinate: Coordinate; var id: String { hex } }`
   - `struct Airport: Sendable, Equatable { let iata: String?; let icao: String; let name: String; let city: String?; let coordinate: Coordinate }`
   - `struct Route: Sendable, Equatable { let airlineName: String?; let origin: Airport; let destination: Airport }`
-  - `struct AircraftPhoto: Sendable, Equatable { let imageURL: URL; let pageURL: URL; let photographer: String }`
   - `enum TrafficFilter: String, CaseIterable, Sendable, Codable { case airport, passingOver, all }`
   - `enum FlightPhase: Sendable, Equatable { case arriving, departing, passingOver }`
   - `enum Geo { static func distanceMiles(_ a: Coordinate, _ b: Coordinate) -> Double; static func crossTrackNauticalMiles(point: Coordinate, from: Coordinate, to: Coordinate) -> Double; static func elevationAngleDegrees(heightFeet: Double, horizontalMiles: Double) -> Double }`
@@ -151,10 +149,10 @@ Rules the tests pin:
 - [ ] **Step 4:** `swift test` → all PASS.
 - [ ] **Step 5:** Commit `feat: nearby selection, phase, formatting, quiet hours`.
 
-### Task 4: Route, photo, elevation, and feed clients
+### Task 4: Route, elevation, and feed clients
 
 **Files:**
-- Create: `FlightKit/Sources/FlightKit/RouteDecoding.swift`, `FlightKit/Sources/FlightKit/Clients.swift`, fixtures `adsbdb-UAL1365.json`, `adsbdb-unknown.json`, `adsblol-UAL1365.json`, `planespotters-N27733.json`, `epqs.json`
+- Create: `FlightKit/Sources/FlightKit/RouteDecoding.swift`, `FlightKit/Sources/FlightKit/Clients.swift`, fixtures `adsbdb-UAL1365.json`, `adsbdb-unknown.json`, `adsblol-UAL1365.json`, `epqs.json`
 - Test: `RouteDecodingTests.swift`, `ClientsTests.swift`
 
 **Interfaces:**
@@ -164,11 +162,10 @@ Rules the tests pin:
   - `enum RouteDecoding { static func adsbdbRoute(from data: Data) -> Route?; static func adsbLolRoute(from data: Data) -> Route?; static func isPlausible(_ route: Route, for position: Coordinate, maxCrossTrackNM: Double = 100) -> Bool }`
   - `struct FeedClient: Sendable { let fetch: HTTPFetch; func aircraft(near: Coordinate, radiusNM: Int = 12) async throws -> [Aircraft] }`. Rounds coordinates to 2 decimals in the URL.
   - `struct RouteClient: Sendable { let fetch: HTTPFetch; func route(callsign: String, position: Coordinate) async throws -> Route? }`. Tries adsbdb, then adsb.lol, and returns the first route that passes `isPlausible` for `position`, else nil. A 404 or unknown response counts as no route. Makes no requests when the callsign doesn't match `^[A-Z]{3}[0-9]`.
-  - `struct PhotoClient: Sendable { let fetch: HTTPFetch; let userAgent: String; func photo(registration: String) async throws -> AircraftPhoto? }`
   - `struct ElevationClient: Sendable { let fetch: HTTPFetch; func groundElevationFeet(at: Coordinate) async throws -> Double }`
   - `enum ClientError: Error, Equatable { case http(status: Int) }`, thrown for status codes other than 2xx/404.
 
-- [ ] **Step 1:** Save the fixtures with curl from the URLs in Global Constraints (planespotters needs `-A "FlightOverheadDev/0.1 (+https://example.com)"`). Also write `adsbdb-unknown.json` as `{"response":"unknown callsign"}`. Save `adsblol-UAL1365.json` from `https://vrs-standing-data.adsb.lol/routes/UA/UAL1365.json`. Pin the UAL1365 fixtures to the verified contents: adsbdb DFW→EWR, adsb.lol SNA→EWR.
+- [ ] **Step 1:** Save the fixtures with curl from the URLs in Global Constraints. Also write `adsbdb-unknown.json` as `{"response":"unknown callsign"}`. Save `adsblol-UAL1365.json` from `https://vrs-standing-data.adsb.lol/routes/UA/UAL1365.json`. Pin the UAL1365 fixtures to the verified contents: adsbdb DFW→EWR, adsb.lol SNA→EWR.
 - [ ] **Step 2: Write failing tests:**
   - The adsbdb UAL1365 fixture → `airlineName == "United Airlines"`, `origin.iata == "DFW"`, `destination.iata == "EWR"`.
   - The adsb.lol UAL1365 fixture → `origin.iata == "SNA"`, `destination.iata == "EWR"`.
@@ -176,7 +173,6 @@ Rules the tests pin:
   - The unknown fixture → nil.
   - `isPlausible` at CLE: false for DFW→EWR (~150 nm), true for SNA→EWR (~41 nm), false for LAX→SFO.
   - `FeedClient` builds the URL `https://opendata.adsb.fi/api/v2/lat/41.41/lon/-81.85/dist/12` from home `41.4123, -81.8498`. Assert this through a stub `HTTPFetch` that records the request.
-  - `PhotoClient` sends the given `User-Agent` header and decodes the photographer `"Wolfgang Kaiser"`.
   - `RouteClient.route(callsign: "N5955K", position: CLE)` makes zero requests.
   - A 503 stub throws `ClientError.http(status: 503)`.
   - `ElevationClient` decodes 781.64.
@@ -197,12 +193,12 @@ Rules the tests pin:
   ```swift
   @MainActor @Observable final class FlightTracker {
     enum Status: Equatable { case idle, quiet, offline }
-    struct Sighting: Equatable { let plane: NearbyPlane; var route: Route?; var photo: AircraftPhoto?; let phase: FlightPhase; let seenAt: Date }
+    struct Sighting: Equatable { let plane: NearbyPlane; var route: Route?; let phase: FlightPhase; let seenAt: Date }
     private(set) var current: Sighting?        // nil when nothing qualifies
     private(set) var lastSeen: Sighting?       // most recent non-nil current
     private(set) var status: Status
     var onNewPlane: (@MainActor (Sighting) -> Void)?   // once per hex per pass
-    init(feed: FeedClient, routes: RouteClient, photos: PhotoClient, now: @escaping @Sendable () -> Date = Date.init)
+    init(feed: FeedClient, routes: RouteClient, now: @escaping @Sendable () -> Date = Date.init)
     func configure(home: Home, criteria: NearbyCriteria, quietHours: QuietHours)
     func tick() async            // one poll cycle; testable
     func start()                 // loops tick() with nextDelay
@@ -213,7 +209,7 @@ Rules the tests pin:
 - Behaviour:
   - During quiet hours, `tick()` sets `.quiet`, clears `current`, and makes no network calls.
   - On a feed error it sets `.offline` and keeps `lastSeen`.
-  - Routes are cached per callsign (looked up with the position at first sighting) and photos per registration for the app's lifetime. Each is fetched at most once, after the plane first qualifies. `current` updates first, and the route and photo fill in after.
+  - Routes are cached per callsign (looked up with the position at first sighting) for the app's lifetime. Each is fetched at most once, after the plane first qualifies. `current` updates first, and the route fills in after.
   - `onNewPlane` fires when a `hex` becomes `current` and hasn't been current in the last 2 minutes.
   - An emergency squawk (7500/7600/7700) needs no special handling here; the card reads it from `plane.aircraft.squawk`.
 
@@ -240,7 +236,6 @@ Rules the tests pin:
 - Produces:
   - `enum MenuBarStyle: String, CaseIterable { case liveText, quietIcon, autoOpenCard }`
   - `@MainActor @Observable final class AppSettings`, backed by UserDefaults, with properties `home: Home?`, `style: MenuBarStyle`, `criteria: NearbyCriteria`, `quietHours: QuietHours`, `notificationsEnabled: Bool`, `launchAtLogin: Bool`, and defaults per Global Constraints
-  - `AppConstants.userAgent: String`. **The value depends on open question 1.**
 
 Notes the implementer cannot infer:
 - `project.yml`:
@@ -256,7 +251,6 @@ Notes the implementer cannot infer:
   - **Offline:** the symbol at 40% alpha. **Quiet:** the symbol `moon.zzz`.
   - No animation in any style.
 - Card (`FlightCardView`), top to bottom:
-  - Photo (`AsyncImage`, 280 pt wide) with `"© {photographer}"` linking to `pageURL`.
   - Title: `"{airline name} {IATA flight number}"`. The airline name is `route.airlineName ?? Lookups.airline(forCallsign:)?.name`. Fall back to the flight label.
   - `typeDescription ?? typeCode`.
   - `"{origin city} ({IATA}) → {destination city} ({IATA})"`, or `route unknown`.
@@ -270,7 +264,7 @@ Notes the implementer cannot infer:
   - Footer: gear button (opens Settings) and Quit.
 
 - [ ] **Step 1:** Write `project.yml`, the plist and entitlements, then run `xcodegen generate` → `FlightOverhead.xcodeproj` is created.
-- [ ] **Step 2:** Implement the app files. Wire `FlightTracker(feed:routes:photos:)` with `HTTPFetch.urlSession`, call `configure` from `AppSettings` on every change, and call `start()` at launch when `home != nil`. When `home == nil`, open Settings at launch.
+- [ ] **Step 2:** Implement the app files. Wire `FlightTracker(feed:routes:)` with `HTTPFetch.urlSession`, call `configure` from `AppSettings` on every change, and call `start()` at launch when `home != nil`. When `home == nil`, open Settings at launch.
 - [ ] **Step 3:** `xcodebuild -project FlightOverhead.xcodeproj -scheme FlightOverhead -configuration Debug build -quiet` → no errors.
 - [ ] **Step 4:** Manual check: run from Xcode with home set to `41.41, -81.85` in the debugger or the defaults. Within 10 s the menu bar shows live text, or the plain icon if the sky is empty. Clicking opens the card. There's no Dock icon.
 - [ ] **Step 5:** Commit `feat: menu bar app shell and detail card`.
@@ -332,8 +326,9 @@ Notes:
 
 ---
 
-## Open questions for Chris
+## Decisions (Chris, 2026-11-11)
 
-1. **Photo request identification.** planespotters.net rejects requests unless the `User-Agent` includes a contact URL or email. Which should it contain? Options: a URL you control, your email, or no photos.
-2. **Notarization credentials.** Do you already have a `notarytool` keychain profile? If not, Task 8 needs you to run `xcrun notarytool store-credentials` once.
-3. **GitHub remote.** Should this repo go on GitHub, private, so the work is backed up? It's local only right now.
+1. Aircraft photos skipped for v1 (planespotters needs a contact User-Agent).
+2. No notarytool keychain profile yet — Task 8 README documents `xcrun notarytool store-credentials` as a one-time step.
+3. Remote: `https://github.com/candrikanich/flight-tracker-menu.git` (public).
+4. Execution: native.

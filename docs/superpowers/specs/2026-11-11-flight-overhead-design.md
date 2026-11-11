@@ -49,7 +49,7 @@ Opening the menu item shows a card for the current plane (or the most recent one
 - Height above the house (ft), horizontal distance (mi)
 - Ground speed (mph)
 - Seat capacity estimate by type, clearly labelled as typical capacity (e.g. "~166 seats")
-- Photo of that specific airframe, with photographer credit
+- ~~Photo of that specific airframe~~ — deferred: skipped for v1 (Chris, 2026-11-11)
 - Registration (tail number) and airframe age when available
 - Emergency squawk (7500/7600/7700) shown prominently on the card when present
 
@@ -75,7 +75,7 @@ Opening the menu item shows a card for the current plane (or the most recent one
 - **Routes:** free community route lookup by callsign (e.g. adsb.lol's route lookup). May be wrong or missing → "route unknown". If unknowns become a real problem, revisit a paid source (e.g. FlightAware AeroAPI) later.
 - **Airline names:** from the ICAO callsign prefix.
 - **Seat capacity:** a small bundled table of typical seats per aircraft type.
-- **Photos:** planespotters.net photo API by registration, honoring its attribution requirements.
+- **Photos (deferred, not in v1):** planespotters.net photo API by registration; requires a descriptive User-Agent with contact info.
 - Poll at a respectful interval for the feed (on the order of every 5–10 s while running) and back off on errors. Personal, non-commercial use only — fine for v1; licensing must be re-checked before any sale.
 
 ## Architecture constraints
