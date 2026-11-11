@@ -4,7 +4,7 @@ import Observation
 import SwiftUI
 
 @main
-struct FlightOverheadApp: App {
+struct OverflightApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
@@ -47,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showSettings() {
         if settingsWindow == nil {
             let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(settings: settings, notifier: notifier)))
-            window.title = "Flight Overhead Settings"
+            window.title = "Overflight Settings"
             window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             settingsWindow = window

@@ -77,7 +77,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         let current = tracker.current
         let symbol = tracker.status == .quiet ? "moon.zzz" : "airplane"
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Flight Overhead")
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Overflight")
         image?.isTemplate = true
         button.image = image
         button.alphaValue = [.offline, .needsHome].contains(tracker.status) ? 0.4 : 1

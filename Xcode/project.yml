@@ -1,5 +1,5 @@
 # Generate with: xcodegen --spec Xcode/project.yml   (FLIGHT_TEAM_ID must be set)
-name: FlightOverhead
+name: Overflight
 options:
   bundleIdPrefix: com.andrikanich
   deploymentTarget:
@@ -8,7 +8,7 @@ packages:
   FlightKit:
     path: ../FlightKit
 targets:
-  FlightOverhead:
+  Overflight:
     type: application
     platform: macOS
     sources: [../App]
@@ -17,7 +17,7 @@ targets:
     info:
       path: ../App/Info.plist
       properties:
-        CFBundleDisplayName: Flight Overhead
+        CFBundleDisplayName: Overflight
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSUIElement: true
@@ -25,14 +25,14 @@ targets:
         # HTTPS only, via the system's own TLS: exempt, so no export-compliance question on each upload.
         ITSAppUsesNonExemptEncryption: false
     entitlements:
-      path: ../App/FlightOverhead.entitlements
+      path: ../App/Overflight.entitlements
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.andrikanich.FlightOverhead
-        PRODUCT_NAME: FlightOverhead
+        PRODUCT_BUNDLE_IDENTIFIER: com.andrikanich.Overflight
+        PRODUCT_NAME: Overflight
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

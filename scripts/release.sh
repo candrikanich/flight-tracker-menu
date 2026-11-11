@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds a Developer ID–signed, notarized Flight Overhead and installs it to /Applications.
+# Builds a Developer ID–signed, notarized Overflight and installs it to /Applications.
 # Usage: FLIGHT_TEAM_ID=XXXXXXXXXX FLIGHT_NOTARY_PROFILE=flight-notary scripts/release.sh
 set -euo pipefail
 
@@ -8,9 +8,9 @@ set -euo pipefail
 
 ROOT=${0:A:h:h}
 BUILD="$ROOT/build/release"
-ARCHIVE="$BUILD/FlightOverhead.xcarchive"
+ARCHIVE="$BUILD/Overflight.xcarchive"
 EXPORT="$BUILD/export"
-APP="$EXPORT/FlightOverhead.app"
+APP="$EXPORT/Overflight.app"
 
 if ! security find-identity -v -p codesigning | grep -q "Developer ID Application"; then
   echo "No 'Developer ID Application' certificate found." >&2
@@ -30,8 +30,8 @@ mkdir -p "$BUILD"
 xcodegen --spec "$ROOT/Xcode/project.yml"
 
 xcodebuild archive \
-  -project "$ROOT/Xcode/FlightOverhead.xcodeproj" \
-  -scheme FlightOverhead \
+  -project "$ROOT/Xcode/Overflight.xcodeproj" \
+  -scheme Overflight \
   -configuration Release \
   -archivePath "$ARCHIVE" \
   -allowProvisioningUpdates \
@@ -56,12 +56,12 @@ xcodebuild -exportArchive \
   -allowProvisioningUpdates \
   -quiet
 
-ditto -c -k --keepParent "$APP" "$BUILD/FlightOverhead.zip"
-xcrun notarytool submit "$BUILD/FlightOverhead.zip" --keychain-profile "$FLIGHT_NOTARY_PROFILE" --wait
+ditto -c -k --keepParent "$APP" "$BUILD/Overflight.zip"
+xcrun notarytool submit "$BUILD/Overflight.zip" --keychain-profile "$FLIGHT_NOTARY_PROFILE" --wait
 xcrun stapler staple "$APP"
 
-pkill -x FlightOverhead || true
-rm -rf /Applications/FlightOverhead.app
+pkill -x Overflight || true
+rm -rf /Applications/Overflight.app
 cp -R "$APP" /Applications/
-spctl -a -vv /Applications/FlightOverhead.app
-echo "Installed /Applications/FlightOverhead.app"
+spctl -a -vv /Applications/Overflight.app
+echo "Installed /Applications/Overflight.app"

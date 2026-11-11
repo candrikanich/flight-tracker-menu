@@ -1,4 +1,4 @@
-# Flight Overhead
+# Overflight
 
 A macOS menu-bar app that tells you about the plane flying over your house. It was built for living under the approach path to Cleveland Hopkins (CLE).
 
@@ -19,7 +19,7 @@ When a plane comes into view, the menu bar shows something like `UA1365 → EWR 
 ```sh
 swift test --package-path FlightKit                        # 100 unit tests
 FLIGHT_TEAM_ID=<team id> xcodegen --spec Xcode/project.yml
-open Xcode/FlightOverhead.xcodeproj                         # run the FlightOverhead scheme
+open Xcode/Overflight.xcodeproj                         # run the Overflight scheme
 ```
 
 On first launch the Settings window opens. Set your home by address or by clicking the map, check the ground elevation, and click **Save location**.

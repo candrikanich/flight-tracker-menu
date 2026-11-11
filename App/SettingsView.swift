@@ -176,7 +176,7 @@ private struct NotificationsSection: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             if denied {
-                Text("Notifications are turned off for Flight Overhead in System Settings.")
+                Text("Notifications are turned off for Overflight in System Settings.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
