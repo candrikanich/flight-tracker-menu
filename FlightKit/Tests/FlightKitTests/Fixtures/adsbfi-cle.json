@@ -1,0 +1,8 @@
+{"now": 1794423454.002
+,"aircraft":[
+{"hex":"a2f1c3","type":"adsb_icao","flight":"UAL1365 ","r":"N27733","t":"B737","desc":"BOEING 737-700","ownOp":"UNITED AIRLINES INC","year":"1999","alt_baro":39000,"alt_geom":39400,"gs":450.1,"track":95.2,"baro_rate":0,"squawk":"1234","emergency":"none","category":"A3","lat":41.52,"lon":-81.70,"messages":4682,"seen":0.0,"rssi":-12.5},
+{"hex":"a2c990","type":"adsb_icao","flight":"N279SW  ","r":"N279SW","t":"F2TH","dbFlags":8,"alt_baro":"ground","gs":0.0,"true_heading":216.56,"squawk":"7423","emergency":"none","category":"A2","lat":41.412495,"lon":-81.858663,"seen":4.4},
+{"hex":"a3a310","type":"adsr_icao","flight":"PU27    ","r":"N333XQ","ownOp":"CLEVELAND HOPKINS INTERNATIONAL AIRPORT","alt_baro":"ground","gs":0.0,"category":"C2","lat":41.400799,"lon":-81.864780,"seen":0.7},
+{"hex":"a006ad","type":"adsb_icao","r":"N100WE","t":"PRM1","desc":"RAYTHEON 390 Premier 1","alt_baro":7075,"gs":227.3,"track":39.64,"geom_rate":0,"squawk":"6657","category":"A1","lat":41.444183,"lon":-81.970492,"seen":0.0},
+{"hex":"abcdef","type":"mode_s","flight":"ERY917  ","alt_baro":12000,"seen":12.0}
+]}

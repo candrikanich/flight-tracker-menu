@@ -1,0 +1,43 @@
+# Generate with: xcodegen --spec Xcode/project.yml   (FLIGHT_TEAM_ID must be set)
+name: Overflight
+options:
+  bundleIdPrefix: com.andrikanich
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  FlightKit:
+    path: ../FlightKit
+targets:
+  Overflight:
+    type: application
+    platform: macOS
+    sources: [../App]
+    dependencies:
+      - package: FlightKit
+    info:
+      path: ../App/Info.plist
+      properties:
+        CFBundleDisplayName: Overflight
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.utilities
+        # HTTPS only, via the system's own TLS: exempt, so no export-compliance question on each upload.
+        ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: ../App/Overflight.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.andrikanich.Overflight
+        PRODUCT_NAME: Overflight
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        DEVELOPMENT_TEAM: ${FLIGHT_TEAM_ID}
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
