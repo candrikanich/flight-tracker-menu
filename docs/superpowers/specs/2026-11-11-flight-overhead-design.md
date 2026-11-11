@@ -1,7 +1,7 @@
 # Flight Overhead — Design
 
 Date: 2026-11-11
-Status: Draft, awaiting approval
+Status: Approved 2026-11-11
 
 ## Intent
 
