@@ -38,7 +38,9 @@ final class StubHTTP: @unchecked Sendable {
     }
 
     @Test func adsbLolRouteDecodes() throws {
-        let route = try #require(RouteDecoding.adsbLolRoute(from: fixture("adsblol-UAL1365")))
+        let legs = RouteDecoding.adsbLolLegs(from: try fixture("adsblol-UAL1365"))
+        #expect(legs.count == 1)
+        let route = try #require(legs.first)
         #expect(route.airlineName == nil)
         #expect(route.origin.iata == "SNA")
         #expect(route.origin.city == "Santa Ana")
@@ -51,13 +53,68 @@ final class StubHTTP: @unchecked Sendable {
 
     @Test func plausibilityAtCleveland() throws {
         let dallas = try #require(RouteDecoding.adsbdbRoute(from: fixture("adsbdb-UAL1365")))
-        let santaAna = try #require(RouteDecoding.adsbLolRoute(from: fixture("adsblol-UAL1365")))
+        let santaAna = try #require(RouteDecoding.adsbLolLegs(from: fixture("adsblol-UAL1365")).first)
         let lax = Airport(iata: "LAX", icao: "KLAX", name: "LAX", city: nil, coordinate: Coordinate(latitude: 33.9425, longitude: -118.408))
         let sfo = Airport(iata: "SFO", icao: "KSFO", name: "SFO", city: nil, coordinate: Coordinate(latitude: 37.619, longitude: -122.375))
         #expect(!RouteDecoding.isPlausible(dallas, for: cle))
         #expect(RouteDecoding.isPlausible(santaAna, for: cle))
         #expect(!RouteDecoding.isPlausible(Route(airlineName: nil, origin: lax, destination: sfo), for: cle))
     }
+
+    @Test func routeThatEndsShortOfThePlaneIsImplausible() {
+        #expect(!RouteDecoding.isPlausible(Route(airlineName: nil, origin: ord, destination: dtw), for: cle))
+        #expect(!RouteDecoding.isPlausible(Route(airlineName: nil, origin: sea, destination: msp), for: cle))
+        #expect(!RouteDecoding.isPlausible(Route(airlineName: nil, origin: dtw, destination: ord), for: cle))
+    }
+
+    @Test func routeArrivingOrDepartingHereIsPlausible() {
+        #expect(RouteDecoding.isPlausible(Route(airlineName: nil, origin: phl, destination: kcle), for: cle))
+        #expect(RouteDecoding.isPlausible(Route(airlineName: nil, origin: kcle, destination: den), for: cle))
+    }
+
+    @Test func multiStopRouteDecodesIntoLegs() {
+        let legs = RouteDecoding.adsbLolLegs(from: adsbLolJSON([phl, kcle, den]))
+        #expect(legs.map { "\($0.origin.iata!)-\($0.destination.iata!)" } == ["PHL-CLE", "CLE-DEN"])
+    }
+
+    @Test func multiStopThroughHerePicksLegByClimbOrDescent() {
+        let legs = [Route(airlineName: nil, origin: phl, destination: kcle),
+                    Route(airlineName: nil, origin: kcle, destination: den)]
+        #expect(RouteDecoding.fittingLeg(legs, position: cle, verticalRateFpm: -800)?.destination.iata == "CLE")
+        #expect(RouteDecoding.fittingLeg(legs, position: cle, verticalRateFpm: 1_500)?.origin.iata == "CLE")
+        #expect(RouteDecoding.fittingLeg(legs, position: cle, verticalRateFpm: 0) == nil)
+        #expect(RouteDecoding.fittingLeg(legs, position: cle, verticalRateFpm: nil) == nil)
+    }
+
+    @Test func multiStopElsewherePicksTheOnlyLegThatFits() {
+        let legs = [Route(airlineName: nil, origin: bos, destination: mdw),
+                    Route(airlineName: nil, origin: mdw, destination: phx)]
+        let leg = RouteDecoding.fittingLeg(legs, position: cle, verticalRateFpm: 0)
+        #expect(leg?.origin.iata == "BOS")
+        #expect(leg?.destination.iata == "MDW")
+    }
+}
+
+private func realAirport(_ iata: String, _ latitude: Double, _ longitude: Double) -> Airport {
+    Airport(iata: iata, icao: "K\(iata)", name: iata, city: nil, coordinate: Coordinate(latitude: latitude, longitude: longitude))
+}
+
+private let kcle = realAirport("CLE", 41.4117, -81.8498)
+private let ord = realAirport("ORD", 41.9786, -87.9048)
+private let dtw = realAirport("DTW", 42.2124, -83.3534)
+private let sea = realAirport("SEA", 47.4502, -122.3088)
+private let msp = realAirport("MSP", 44.8848, -93.2223)
+private let phl = realAirport("PHL", 39.8719, -75.2411)
+private let den = realAirport("DEN", 39.8561, -104.6737)
+private let bos = realAirport("BOS", 42.3656, -71.0096)
+private let mdw = realAirport("MDW", 41.7868, -87.7522)
+private let phx = realAirport("PHX", 33.4342, -112.0116)
+
+private func adsbLolJSON(_ airports: [Airport]) -> Data {
+    let entries = airports.map {
+        #"{"name":"\#($0.name)","icao":"\#($0.icao)","iata":"\#($0.iata!)","lat":\#($0.coordinate.latitude),"lon":\#($0.coordinate.longitude)}"#
+    }
+    return Data(#"{"callsign":"SWA1","_airports":[\#(entries.joined(separator: ","))]}"#.utf8)
 }
 
 @Suite struct ClientsTests {
@@ -90,6 +147,38 @@ final class StubHTTP: @unchecked Sendable {
         http.on("adsbdb.com", status: 404, body: try fixture("adsbdb-unknown"))
         http.on("adsb.lol", body: try fixture("adsblol-UAL1365"))
         #expect(try await RouteClient(fetch: http.fetch).route(callsign: "UAL1365", position: cle)?.origin.iata == "SNA")
+    }
+
+    @Test func routeClientFallsThroughToAdsbLolWhenAdsbdbErrors() async throws {
+        let http = StubHTTP()
+        http.on("adsbdb.com", status: 503)
+        http.on("adsb.lol", body: try fixture("adsblol-UAL1365"))
+        #expect(try await RouteClient(fetch: http.fetch).route(callsign: "UAL1365", position: cle)?.origin.iata == "SNA")
+    }
+
+    @Test func routeClientThrowsWhenASourceErroredAndNoneFits() async throws {
+        let http = StubHTTP()
+        http.on("adsbdb.com", status: 429)
+        http.on("adsb.lol", status: 404)
+        await #expect(throws: ClientError.http(status: 429)) {
+            try await RouteClient(fetch: http.fetch).route(callsign: "UAL1365", position: cle)
+        }
+    }
+
+    @Test func routeClientPicksMultiStopLegUsingVerticalRate() async throws {
+        let http = StubHTTP()
+        http.on("adsbdb.com", status: 404)
+        http.on("adsb.lol", body: adsbLolJSON([phl, kcle, den]))
+        let route = try await RouteClient(fetch: http.fetch).route(callsign: "SWA1234", position: cle, verticalRateFpm: -900)
+        #expect(route?.origin.iata == "PHL")
+        #expect(route?.destination.iata == "CLE")
+    }
+
+    @Test func routeRequestsGiveUpWithinFiveSeconds() async throws {
+        let http = StubHTTP()
+        _ = try await RouteClient(fetch: http.fetch).route(callsign: "UAL1365", position: cle)
+        #expect(http.requests.count == 2)
+        #expect(http.requests.allSatisfy { $0.timeoutInterval <= 5 })
     }
 
     @Test func routeClientMakesNoRequestsForRegistrationCallsigns() async throws {

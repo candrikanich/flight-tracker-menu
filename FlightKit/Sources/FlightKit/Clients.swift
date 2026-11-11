@@ -15,9 +15,9 @@ public enum ClientError: Error, Equatable {
 }
 
 /// Returns the body for 2xx, nil for 404, and throws for anything else.
-private func get(_ url: URL, using fetch: HTTPFetch) async throws -> Data? {
+private func get(_ url: URL, using fetch: HTTPFetch, timeout: TimeInterval = 15) async throws -> Data? {
     var request = URLRequest(url: url)
-    request.timeoutInterval = 15
+    request.timeoutInterval = timeout
     let (data, response) = try await fetch(request)
     switch response.statusCode {
     case 200..<300: return data
@@ -50,21 +50,33 @@ public struct RouteClient: Sendable {
         self.fetch = fetch
     }
 
-    /// Tries adsbdb, then adsb.lol, and keeps the first route that fits where the plane actually is.
-    public func route(callsign: String, position: Coordinate) async throws -> Route? {
+    /// Tries adsbdb, then adsb.lol, and keeps the first route (the leg, for a multi-stop flight)
+    /// that fits where the plane is.
+    public func route(callsign: String, position: Coordinate, verticalRateFpm: Int? = nil) async throws -> Route? {
         guard callsign.wholeMatch(of: /[A-Z]{3}[0-9][0-9A-Z]{0,4}/) != nil else { return nil }
 
-        let sources: [(URL, (Data) -> Route?)] = [
-            (URL(string: "https://api.adsbdb.com/v0/callsign/\(callsign)")!, RouteDecoding.adsbdbRoute),
+        let sources: [(URL, (Data) -> [Route])] = [
+            (URL(string: "https://api.adsbdb.com/v0/callsign/\(callsign)")!,
+             { RouteDecoding.adsbdbRoute(from: $0).map { [$0] } ?? [] }),
             (URL(string: "https://vrs-standing-data.adsb.lol/routes/\(callsign.prefix(2))/\(callsign).json")!,
-             RouteDecoding.adsbLolRoute),
+             RouteDecoding.adsbLolLegs),
         ]
+        var firstError: Error?
         for (url, decode) in sources {
-            if let data = try await get(url, using: fetch), let route = decode(data),
-               RouteDecoding.isPlausible(route, for: position) {
-                return route
+            do {
+                // Short timeout: the tracker waits on this before showing a newly arrived plane.
+                if let data = try await get(url, using: fetch, timeout: 5),
+                   let route = RouteDecoding.fittingLeg(
+                       decode(data), position: position, verticalRateFpm: verticalRateFpm
+                   ) {
+                    return route
+                }
+            } catch {
+                firstError = firstError ?? error
             }
         }
+        // A source that errored might have had the route, so this is "try again later", not "no route".
+        if let firstError { throw firstError }
         return nil
     }
 }

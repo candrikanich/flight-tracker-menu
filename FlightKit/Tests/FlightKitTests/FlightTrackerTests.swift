@@ -151,7 +151,7 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         #expect(tracker.current?.phase == .passingOver)
     }
 
-    @Test func routeLookupFailureIsRetriedOnTheNextTick() async throws {
+    @Test func routeLookupFailureIsRetriedAfterAMinuteNotEveryTick() async throws {
         serveFeed([("ual", "UAL1365", 2_000, 0.3)])
         http.on("adsbdb.com", status: 503)
         let tracker = makeTracker()
@@ -161,6 +161,12 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
 
         http.on("adsbdb.com", body: try fixture("adsbdb-unknown"))
         http.on("adsb.lol", body: try fixture("adsblol-UAL1365"))
+        clock.advance(5)
+        await tracker.tick()
+        #expect(requestCount("adsbdb.com") == 1)
+        #expect(tracker.current?.route == nil)
+
+        clock.advance(60)
         await tracker.tick()
         #expect(tracker.current?.route?.origin.iata == "SNA")
     }

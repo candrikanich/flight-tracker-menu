@@ -12,19 +12,47 @@ public enum RouteDecoding {
         )
     }
 
-    public static func adsbLolRoute(from data: Data) -> Route? {
-        guard let airports = try? JSONDecoder().decode(AdsbLolRoute.self, from: data).airports,
-              let origin = airports.first, let destination = airports.last, airports.count >= 2 else {
+    /// adsb.lol lists every stop of a through-flight; each consecutive pair is one leg.
+    public static func adsbLolLegs(from data: Data) -> [Route] {
+        guard let airports = try? JSONDecoder().decode(AdsbLolRoute.self, from: data).airports else { return [] }
+        return zip(airports, airports.dropFirst()).map {
+            Route(airlineName: nil, origin: $0.airport, destination: $1.airport)
+        }
+    }
+
+    /// The one leg that fits where the plane is. When two legs meet here (a stop at this airport), climbing
+    /// means the leg leaving and descending the leg arriving; level or unknown is too ambiguous to state.
+    public static func fittingLeg(_ legs: [Route], position: Coordinate, verticalRateFpm: Int?) -> Route? {
+        let candidates = legs.filter { isPlausible($0, for: position) }
+        guard candidates.count > 1 else { return candidates.first }
+        switch verticalRateFpm ?? 0 {
+        case ...(-Phase.climbOrDescentThresholdFpm):
+            return candidates.min { distance($0.destination, position) < distance($1.destination, position) }
+        case Phase.climbOrDescentThresholdFpm...:
+            return candidates.min { distance($0.origin, position) < distance($1.origin, position) }
+        default:
             return nil
         }
-        return Route(airlineName: nil, origin: origin.airport, destination: destination.airport)
+    }
+
+    private static func distance(_ airport: Airport, _ position: Coordinate) -> Double {
+        Geo.distanceMiles(airport.coordinate, position)
     }
 
     /// Free route databases are keyed by callsign and go stale; a route whose path runs far from where
-    /// the plane actually is was almost certainly flown by a different flight with the same number.
-    public static func isPlausible(_ route: Route, for position: Coordinate, maxCrossTrackNM: Double = 100) -> Bool {
-        Geo.crossTrackNauticalMiles(point: position, from: route.origin.coordinate, to: route.destination.coordinate)
-            <= maxCrossTrackNM
+    /// the plane actually is — off to the side, or beyond either end — was almost certainly flown by a
+    /// different flight with the same number.
+    public static func isPlausible(
+        _ route: Route,
+        for position: Coordinate,
+        maxCrossTrackNM: Double = 100,
+        endMarginNM: Double = 50
+    ) -> Bool {
+        let (origin, destination) = (route.origin.coordinate, route.destination.coordinate)
+        let along = Geo.alongTrackNauticalMiles(point: position, from: origin, to: destination)
+        return Geo.crossTrackNauticalMiles(point: position, from: origin, to: destination) <= maxCrossTrackNM
+            && along >= -endMarginNM
+            && along <= Geo.distanceNauticalMiles(origin, destination) + endMarginNM
     }
 }
 

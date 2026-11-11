@@ -17,6 +17,19 @@ public enum Geo {
         return abs(asin(sin(delta13) * sin(theta13 - theta12))) * earthRadiusNauticalMiles
     }
 
+    /// How far along the path from `from` toward `to` the point closest to `point` lies; negative means behind `from`.
+    public static func alongTrackNauticalMiles(point: Coordinate, from: Coordinate, to: Coordinate) -> Double {
+        let delta13 = angularDistance(from, point)
+        let relativeBearing = bearing(from, point) - bearing(from, to)
+        let crossTrack = asin(sin(delta13) * sin(relativeBearing))
+        let along = acos(max(-1, min(1, cos(delta13) / cos(crossTrack))))
+        return (cos(relativeBearing) < 0 ? -along : along) * earthRadiusNauticalMiles
+    }
+
+    public static func distanceNauticalMiles(_ a: Coordinate, _ b: Coordinate) -> Double {
+        angularDistance(a, b) * earthRadiusNauticalMiles
+    }
+
     public static func elevationAngleDegrees(heightFeet: Double, horizontalMiles: Double) -> Double {
         atan2(heightFeet, horizontalMiles * feetPerMile) * 180 / .pi
     }

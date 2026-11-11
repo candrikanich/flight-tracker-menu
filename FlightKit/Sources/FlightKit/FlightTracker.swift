@@ -17,6 +17,8 @@ public final class FlightTracker {
 
     /// A plane that has been out of view this long is announced again when it reappears.
     static let reannounceAfter: TimeInterval = 120
+    /// A failed route lookup is not retried sooner than this, so a struggling source isn't hit every poll.
+    static let routeRetryAfter: TimeInterval = 60
     static let backoff: [Duration] = [.seconds(5), .seconds(10), .seconds(20), .seconds(60)]
 
     public private(set) var current: Sighting?
@@ -39,6 +41,7 @@ public final class FlightTracker {
     @ObservationIgnored private var consecutiveFailures = 0
     /// nil value = looked up, no route found. Missing key = not looked up yet (or the lookup failed).
     @ObservationIgnored private var routeCache: [String: Route?] = [:]
+    @ObservationIgnored private var routeFailedAt: [String: Date] = [:]
     @ObservationIgnored private var lastCurrentAt: [String: Date] = [:]
     @ObservationIgnored private var loop: Task<Void, Never>?
 
@@ -107,7 +110,7 @@ public final class FlightTracker {
         let isNewPass = lastCurrentAt[hex].map { time.timeIntervalSince($0) > Self.reannounceAfter } ?? true
         lastCurrentAt[hex] = time
 
-        let route = await route(for: nearby.aircraft)
+        let route = await route(for: nearby.aircraft, at: time)
         let sighting = Sighting(
             plane: nearby,
             route: route,
@@ -119,14 +122,21 @@ public final class FlightTracker {
         if isNewPass { onNewPlane?(sighting) }
     }
 
-    private func route(for aircraft: Aircraft) async -> Route? {
+    private func route(for aircraft: Aircraft, at time: Date) async -> Route? {
         guard let callsign = aircraft.callsign else { return nil }
         if let cached = routeCache[callsign] { return cached }
+        if let failedAt = routeFailedAt[callsign], time.timeIntervalSince(failedAt) < Self.routeRetryAfter {
+            return nil
+        }
         do {
-            let route = try await routes.route(callsign: callsign, position: aircraft.coordinate)
+            let route = try await routes.route(
+                callsign: callsign, position: aircraft.coordinate, verticalRateFpm: aircraft.verticalRateFpm
+            )
             routeCache[callsign] = .some(route)
+            routeFailedAt[callsign] = nil
             return route
         } catch {
+            routeFailedAt[callsign] = time
             return nil
         }
     }
