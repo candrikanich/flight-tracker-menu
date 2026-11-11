@@ -52,7 +52,7 @@ private struct Record: Decodable {
             operatorName: ownOp.nonBlank,
             yearBuilt: year.nonBlank.flatMap(Int.init),
             altitudeFeet: altBaro?.feet,
-            groundSpeedKnots: gs,
+            groundSpeedKnots: gs.flatMap { (0...2_000).contains($0) ? $0 : nil },
             verticalRateFpm: baroRate,
             squawk: squawk.nonBlank,
             category: category.nonBlank,

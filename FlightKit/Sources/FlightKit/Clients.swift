@@ -76,11 +76,12 @@ public struct ElevationClient: Sendable {
         self.fetch = fetch
     }
 
+    /// Rounded to ~100 m: plenty for ground elevation, and the exact home location never leaves the Mac.
     public func groundElevationFeet(at coordinate: Coordinate) async throws -> Double {
         var components = URLComponents(string: "https://epqs.nationalmap.gov/v1/json")!
         components.queryItems = [
-            URLQueryItem(name: "x", value: String(coordinate.longitude)),
-            URLQueryItem(name: "y", value: String(coordinate.latitude)),
+            URLQueryItem(name: "x", value: String(format: "%.3f", coordinate.longitude)),
+            URLQueryItem(name: "y", value: String(format: "%.3f", coordinate.latitude)),
             URLQueryItem(name: "units", value: "Feet"),
             URLQueryItem(name: "wkid", value: "4326"),
         ]

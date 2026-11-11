@@ -72,4 +72,10 @@ import Testing
     @Test func knotsToMph() {
         #expect(Formatting.mph(knots: 100) == 115)
     }
+
+    @Test func mphNeverTrapsOnNonFiniteOrHugeInput() {
+        #expect(Formatting.mph(knots: .infinity) == nil)
+        #expect(Formatting.mph(knots: .nan) == nil)
+        #expect(Formatting.mph(knots: 1e300) == nil)
+    }
 }

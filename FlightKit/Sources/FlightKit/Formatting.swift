@@ -20,8 +20,9 @@ public enum Formatting {
         return registration ?? "Unknown aircraft"
     }
 
-    public static func mph(knots: Double) -> Int {
-        Int((knots * mphPerKnot).rounded())
+    /// nil for values no aircraft can fly, which also keeps the Int conversion from trapping.
+    public static func mph(knots: Double) -> Int? {
+        Int(exactly: (knots * mphPerKnot).rounded()).flatMap { (0...5_000).contains($0) ? $0 : nil }
     }
 
     /// Fixed so the menu bar reads the same regardless of system region; the app's copy is English-only.

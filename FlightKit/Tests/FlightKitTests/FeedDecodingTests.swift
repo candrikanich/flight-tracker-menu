@@ -62,6 +62,12 @@ func fixture(_ name: String) throws -> Data {
         #expect(decoded.first?.altitudeFeet == 3_000)
     }
 
+    @Test func absurdGroundSpeedIsDiscarded() throws {
+        let json = #"{"aircraft":[{"hex":"fast","alt_baro":3000,"gs":1e300,"lat":41.4,"lon":-81.8}]}"#
+        let decoded = try FeedDecoding.aircraft(from: Data(json.utf8))
+        #expect(decoded.first?.groundSpeedKnots == nil)
+    }
+
     @Test func malformedJSONThrows() {
         #expect(throws: (any Error).self) {
             try FeedDecoding.aircraft(from: Data("{".utf8))

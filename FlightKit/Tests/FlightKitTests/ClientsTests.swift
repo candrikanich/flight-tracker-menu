@@ -114,4 +114,12 @@ final class StubHTTP: @unchecked Sendable {
         let url = try #require(http.requests.first?.url?.absoluteString)
         #expect(url.contains("x=-81.85") && url.contains("y=41.41") && url.contains("units=Feet"))
     }
+
+    @Test func elevationClientRoundsCoordinatesToAboutOneHundredMeters() async throws {
+        let http = StubHTTP()
+        http.on("epqs.nationalmap.gov", body: try fixture("epqs"))
+        _ = try await ElevationClient(fetch: http.fetch).groundElevationFeet(at: Coordinate(latitude: 41.412345, longitude: -81.856789))
+        let url = try #require(http.requests.first?.url?.absoluteString)
+        #expect(url.contains("x=-81.857&y=41.412"))
+    }
 }
