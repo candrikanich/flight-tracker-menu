@@ -117,7 +117,7 @@ public final class FlightTracker {
             .map { time.timeIntervalSince($0) > Self.reannounceAfter } ?? true
         for plane in inRange { lastInRangeAt[plane.aircraft.hex] = time }
 
-        let route = await route(for: nearby.aircraft, at: time)
+        let route = await route(for: nearby, at: time)
         let sighting = Sighting(
             plane: nearby,
             route: route,
@@ -129,7 +129,8 @@ public final class FlightTracker {
         if isNewPass { onNewPlane?(sighting) }
     }
 
-    private func route(for aircraft: Aircraft, at time: Date) async -> Route? {
+    private func route(for plane: NearbyPlane, at time: Date) async -> Route? {
+        let aircraft = plane.aircraft
         guard let callsign = aircraft.callsign else { return nil }
         if let cached = routeCache[callsign], time.timeIntervalSince(cached.at) < Self.routeCacheLifetime {
             return cached.route
@@ -139,7 +140,8 @@ public final class FlightTracker {
         }
         do {
             let route = try await routes.route(
-                callsign: callsign, position: aircraft.coordinate, verticalRateFpm: aircraft.verticalRateFpm
+                callsign: callsign, position: aircraft.coordinate, verticalRateFpm: aircraft.verticalRateFpm,
+                heightAboveGroundFeet: plane.heightAboveHomeFeet
             )
             routeCache[callsign] = (route, time)
             routeFailedAt[callsign] = nil

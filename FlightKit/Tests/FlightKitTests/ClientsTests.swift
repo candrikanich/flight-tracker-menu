@@ -86,6 +86,46 @@ final class StubHTTP: @unchecked Sendable {
         #expect(RouteDecoding.fittingLeg(legs, position: cle, verticalRateFpm: nil) == nil)
     }
 
+    /// ERY99 over Olmsted at 1,310 ft, descending: the stale ACK→CGF route runs right past, but a plane
+    /// that low lands within a few miles, and Cuyahoga County is 21 nm away. It is landing at CLE.
+    @Test func lowDescentRejectsRouteEndingAtAFarAirport() {
+        let ackToCgf = Route(airlineName: nil, origin: ack, destination: cgf)
+        #expect(RouteDecoding.isPlausible(ackToCgf, for: olmsted))
+        #expect(RouteDecoding.fittingLeg([ackToCgf], position: olmsted, verticalRateFpm: -800,
+                                         heightAboveGroundFeet: 1_310) == nil)
+    }
+
+    @Test func lowDescentKeepsRouteEndingAtTheNearbyAirport() {
+        let arrival = Route(airlineName: nil, origin: phl, destination: kcle)
+        #expect(RouteDecoding.fittingLeg([arrival], position: olmsted, verticalRateFpm: -800,
+                                         heightAboveGroundFeet: 1_310)?.destination.iata == "CLE")
+    }
+
+    @Test func lowClimbRejectsRouteStartingAtAFarAirport() {
+        let fromCgf = Route(airlineName: nil, origin: cgf, destination: den)
+        let fromCle = Route(airlineName: nil, origin: kcle, destination: den)
+        #expect(RouteDecoding.fittingLeg([fromCgf], position: olmsted, verticalRateFpm: 1_500,
+                                         heightAboveGroundFeet: 2_000) == nil)
+        #expect(RouteDecoding.fittingLeg([fromCle], position: olmsted, verticalRateFpm: 1_500,
+                                         heightAboveGroundFeet: 2_000)?.origin.iata == "CLE")
+    }
+
+    @Test func heightRuleLeavesHighTrafficAlone() {
+        let ackToCgf = Route(airlineName: nil, origin: ack, destination: cgf)
+        #expect(RouteDecoding.fittingLeg([ackToCgf], position: olmsted, verticalRateFpm: -800,
+                                         heightAboveGroundFeet: 8_000)?.destination.iata == "CGF")
+    }
+
+    @Test func routeClientUsesHeightToRejectAFarDestination() async throws {
+        let http = StubHTTP()
+        http.on("adsbdb.com", status: 404)
+        http.on("adsb.lol", body: adsbLolJSON([ack, cgf]))
+        let route = try await RouteClient(fetch: http.fetch).route(
+            callsign: "ERY99", position: olmsted, verticalRateFpm: -800, heightAboveGroundFeet: 1_310
+        )
+        #expect(route == nil)
+    }
+
     @Test func multiStopElsewherePicksTheOnlyLegThatFits() {
         let legs = [Route(airlineName: nil, origin: bos, destination: mdw),
                     Route(airlineName: nil, origin: mdw, destination: phx)]
@@ -109,6 +149,10 @@ private let den = realAirport("DEN", 39.8561, -104.6737)
 private let bos = realAirport("BOS", 42.3656, -71.0096)
 private let mdw = realAirport("MDW", 41.7868, -87.7522)
 private let phx = realAirport("PHX", 33.4342, -112.0116)
+private let ack = realAirport("ACK", 41.2531, -70.0603)
+private let cgf = realAirport("CGF", 41.5651, -81.4864)
+/// Under the CLE approach, about 5 nm southwest of the airport.
+private let olmsted = Coordinate(latitude: 41.39, longitude: -81.92)
 
 private func adsbLolJSON(_ airports: [Airport]) -> Data {
     let entries = airports.map {

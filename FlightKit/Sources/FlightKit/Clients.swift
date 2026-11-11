@@ -52,7 +52,12 @@ public struct RouteClient: Sendable {
 
     /// Tries adsbdb, then adsb.lol, and keeps the first route (the leg, for a multi-stop flight)
     /// that fits where the plane is.
-    public func route(callsign: String, position: Coordinate, verticalRateFpm: Int? = nil) async throws -> Route? {
+    public func route(
+        callsign: String,
+        position: Coordinate,
+        verticalRateFpm: Int? = nil,
+        heightAboveGroundFeet: Int? = nil
+    ) async throws -> Route? {
         guard callsign.wholeMatch(of: /[A-Z]{3}[0-9][0-9A-Z]{0,4}/) != nil else { return nil }
 
         let sources: [(URL, (Data) -> [Route])] = [
@@ -67,7 +72,8 @@ public struct RouteClient: Sendable {
                 // Short timeout: the tracker waits on this before showing a newly arrived plane.
                 if let data = try await get(url, using: fetch, timeout: 5),
                    let route = RouteDecoding.fittingLeg(
-                       decode(data), position: position, verticalRateFpm: verticalRateFpm
+                       decode(data), position: position, verticalRateFpm: verticalRateFpm,
+                       heightAboveGroundFeet: heightAboveGroundFeet
                    ) {
                     return route
                 }

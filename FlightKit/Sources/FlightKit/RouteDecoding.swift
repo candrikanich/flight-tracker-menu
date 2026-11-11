@@ -22,8 +22,17 @@ public enum RouteDecoding {
 
     /// The one leg that fits where the plane is. When two legs meet here (a stop at this airport), climbing
     /// means the leg leaving and descending the leg arriving; level or unknown is too ambiguous to state.
-    public static func fittingLeg(_ legs: [Route], position: Coordinate, verticalRateFpm: Int?) -> Route? {
-        let candidates = legs.filter { isPlausible($0, for: position) }
+    public static func fittingLeg(
+        _ legs: [Route],
+        position: Coordinate,
+        verticalRateFpm: Int?,
+        heightAboveGroundFeet: Int? = nil
+    ) -> Route? {
+        let candidates = legs.filter {
+            isPlausible($0, for: position)
+                && fitsHeight($0, position: position, verticalRateFpm: verticalRateFpm,
+                              heightAboveGroundFeet: heightAboveGroundFeet)
+        }
         guard candidates.count > 1 else { return candidates.first }
         switch verticalRateFpm ?? 0 {
         case ...(-Phase.climbOrDescentThresholdFpm):
@@ -32,6 +41,33 @@ public enum RouteDecoding {
             return candidates.min { distance($0.origin, position) < distance($1.origin, position) }
         default:
             return nil
+        }
+    }
+
+    /// Below this, a climbing or descending plane is leaving or landing nearby, not cruising past.
+    static let lowTrafficCeilingFeet = 5_000
+    /// A 3° approach loses about 300 ft per nautical mile.
+    static let feetPerNauticalMileOnApproach = 300.0
+    /// Room for base legs, vectors and steeper climbs.
+    static let approachSlackNM = 8.0
+
+    /// A low plane that is descending lands within a few miles, and one climbing took off a few miles back;
+    /// a stale route whose airport at that end is farther away belongs to a different trip.
+    static func fitsHeight(
+        _ route: Route,
+        position: Coordinate,
+        verticalRateFpm: Int?,
+        heightAboveGroundFeet: Int?
+    ) -> Bool {
+        guard let height = heightAboveGroundFeet, height < lowTrafficCeilingFeet else { return true }
+        let reachNM = Double(height) / feetPerNauticalMileOnApproach + approachSlackNM
+        switch verticalRateFpm ?? 0 {
+        case ...(-Phase.climbOrDescentThresholdFpm):
+            return Geo.distanceNauticalMiles(route.destination.coordinate, position) <= reachNM
+        case Phase.climbOrDescentThresholdFpm...:
+            return Geo.distanceNauticalMiles(route.origin.coordinate, position) <= reachNM
+        default:
+            return true
         }
     }
 
