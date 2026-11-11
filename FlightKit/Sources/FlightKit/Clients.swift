@@ -97,7 +97,10 @@ public struct ElevationClient: Sendable {
             URLQueryItem(name: "units", value: "Feet"),
             URLQueryItem(name: "wkid", value: "4326"),
         ]
-        guard let data = try await get(components.url!, using: fetch) else { throw ClientError.http(status: 404) }
+        // USGS often takes 10–20 s to answer.
+        guard let data = try await get(components.url!, using: fetch, timeout: 30) else {
+            throw ClientError.http(status: 404)
+        }
         return try JSONDecoder().decode(Elevation.self, from: data).value
     }
 

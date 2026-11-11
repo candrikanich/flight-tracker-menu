@@ -181,6 +181,14 @@ private func adsbLolJSON(_ airports: [Airport]) -> Data {
         #expect(http.requests.allSatisfy { $0.timeoutInterval <= 5 })
     }
 
+    /// USGS often takes 10–20 s; a 15 s limit made setup fail and left Save disabled.
+    @Test func elevationLookupWaitsLongEnoughForSlowUSGSReplies() async throws {
+        let http = StubHTTP()
+        http.on("epqs", body: Data(#"{"value":777.1}"#.utf8))
+        _ = try await ElevationClient(fetch: http.fetch).groundElevationFeet(at: cle)
+        #expect(http.requests.allSatisfy { $0.timeoutInterval >= 30 })
+    }
+
     @Test func routeClientMakesNoRequestsForRegistrationCallsigns() async throws {
         let http = StubHTTP()
         #expect(try await RouteClient(fetch: http.fetch).route(callsign: "N5955K", position: cle) == nil)
