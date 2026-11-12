@@ -10,15 +10,15 @@ extension Formatting {
 
         /// A stale number read aloud on its own would sound current.
         public func spokenLabel(isStale: Bool) -> String {
-            isStale ? "\(spoken), when last seen" : spoken
+            isStale ? "\(spoken), at last known position" : spoken
         }
     }
 
-    /// "Nearby now" only for a plane on the latest successful check; otherwise when it was seen and,
-    /// if something other than an empty sky is the reason, why nothing is live.
+    /// "Nearby now" only for a plane on the latest successful check. Otherwise the numbers below are a
+    /// last known position, said up front, with why nothing is live when it isn't just an empty sky.
     public static func freshness(seenAt: Date, isCurrent: Bool, status: FlightTracker.Status, now: Date) -> String {
         if isCurrent { return "Nearby now" }
-        let seen = lastSeen(seenAt, now: now)
+        let seen = "Last known position · \(ago(seenAt, now: now))"
         return status == .idle ? seen : "\(seen) · \(emptyState(status).title)"
     }
 
@@ -39,21 +39,28 @@ extension Formatting {
     }
 
     /// Height is above home's ground, not sea level, so "Above you" is accurate. Speed is ground speed.
-    public static func stats(_ plane: NearbyPlane) -> [Stat] {
+    /// On a stale card "Above you" would read as current, so it becomes the height at that sighting.
+    public static func stats(_ plane: NearbyPlane, isStale: Bool) -> [Stat] {
         let feet = plane.heightAboveHomeFeet.formatted(.number.grouping(.automatic).locale(usEnglish))
         let miles = plane.distanceMiles.formatted(.number.precision(.fractionLength(1)).locale(usEnglish))
         let speed = plane.aircraft.groundSpeedKnots.flatMap(mph(knots:)).map {
             Stat(value: "\($0) mph", label: "Speed", spoken: "\($0) miles per hour")
         }
         return [
-            Stat(value: "\(feet) ft", label: "Above you", spoken: "\(feet) feet above you"),
+            Stat(value: "\(feet) ft", label: isStale ? "Height above you" : "Above you",
+                 spoken: "\(feet) feet above you"),
             Stat(value: "\(miles) mi", label: "Distance", spoken: "\(miles) miles away"),
             speed ?? Stat(value: missingValue, label: "Speed", spoken: "Speed unavailable"),
         ]
     }
 
+    /// When the flight identity is already the registration (no callsign, or a light aircraft broadcasting
+    /// its tail number), it isn't said twice.
     public static func aircraftLine(_ aircraft: Aircraft) -> String? {
-        let parts = [aircraft.typeDescription ?? aircraft.typeCode, aircraft.registration].compactMap(\.self)
+        let registration = aircraft.registration.flatMap {
+            flightLabel(callsign: aircraft.callsign, registration: $0) == $0 ? nil : $0
+        }
+        let parts = [aircraft.typeDescription ?? aircraft.typeCode, registration].compactMap(\.self)
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 

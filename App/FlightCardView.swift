@@ -63,7 +63,9 @@ private struct TallyLine: View {
     var body: some View {
         if tally.count > 0 {
             VStack(alignment: .leading, spacing: 2) {
-                Text(Formatting.tallyHeadline(count: tally.count)).foregroundStyle(.primary)
+                Text(Formatting.tallyHeadline(count: tally.count))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.primary)
                 if let details = Formatting.tallyDetails(tally, calendar: .current) {
                     Text(details).foregroundStyle(.secondary)
                 }
@@ -75,9 +77,10 @@ private struct TallyLine: View {
 
 private struct SightingDetails: View {
     let sighting: FlightTracker.Sighting
-    /// "Nearby now" or "Last seen 2 min ago": words, not a colored dot, so fresh and stale can't be confused.
+    /// "Nearby now" or "Last known position · 2 min ago": words, not a colored dot, so fresh and stale
+    /// can't be confused.
     let freshness: String
-    /// A stale card keeps its facts but drops anything that looks live: no red banner, muted numbers.
+    /// A stale card keeps its facts but drops anything that looks live: no red banner, "last known" labels.
     let isStale: Bool
     /// nil hides the map: turned off in Settings, or no home to put on it.
     let mapHome: Coordinate?
@@ -111,7 +114,7 @@ private struct SightingDetails: View {
                 }
             }
             heading
-            StatsRow(stats: Formatting.stats(sighting.plane), isStale: isStale)
+            StatsRow(stats: Formatting.stats(sighting.plane, isStale: isStale), isStale: isStale)
             if let mapHome {
                 FlightMapView(home: mapHome, aircraft: aircraft, path: path, route: sighting.route)
                     .opacity(isStale ? 0.6 : 1)
@@ -173,6 +176,7 @@ private struct SightingDetails: View {
 }
 
 /// Equal columns with tabular figures, so the row doesn't shift as the numbers change each poll.
+/// Values stay dark even when stale: the labels and the line above them carry the "last known" signal.
 private struct StatsRow: View {
     let stats: [Formatting.Stat]
     let isStale: Bool
@@ -185,8 +189,11 @@ private struct StatsRow: View {
                         .font(.system(size: 19, weight: .semibold).monospacedDigit())
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                        .foregroundStyle(isStale ? .secondary : .primary)
-                    Text(stat.label).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(stat.label)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .ignore)

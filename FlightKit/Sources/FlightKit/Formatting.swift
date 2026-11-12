@@ -18,11 +18,15 @@ public enum Formatting {
 
     /// Minute precision on purpose: a counter ticking every second is the kind of motion the app avoids.
     public static func lastSeen(_ date: Date, now: Date) -> String {
+        "Last seen \(ago(date, now: now))"
+    }
+
+    static func ago(_ date: Date, now: Date) -> String {
         let seconds = max(0, now.timeIntervalSince(date))
         switch seconds {
-        case ..<60: return "Last seen just now"
-        case ..<3_600: return "Last seen \(Int(seconds / 60)) min ago"
-        default: return "Last seen \(Int(seconds / 3_600)) hr ago"
+        case ..<60: return "just now"
+        case ..<3_600: return "\(Int(seconds / 60)) min ago"
+        default: return "\(Int(seconds / 3_600)) hr ago"
         }
     }
 
