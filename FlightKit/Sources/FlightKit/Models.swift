@@ -39,6 +39,8 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
     public let category: String?
     /// From the feed's aircraft database, not guessed from the callsign.
     public let isMilitary: Bool
+    /// Direction of travel over the ground, in degrees from true north.
+    public let trackDegrees: Double?
     public let coordinate: Coordinate
 
     public var id: String { hex }
@@ -57,6 +59,7 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
         squawk: String? = nil,
         category: String? = nil,
         isMilitary: Bool = false,
+        trackDegrees: Double? = nil,
         coordinate: Coordinate
     ) {
         self.hex = hex
@@ -72,6 +75,7 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
         self.squawk = squawk
         self.category = category
         self.isMilitary = isMilitary
+        self.trackDegrees = trackDegrees
         self.coordinate = coordinate
     }
 }

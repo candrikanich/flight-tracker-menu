@@ -51,6 +51,13 @@ func fixture(_ name: String) throws -> Data {
         #expect(united.coordinate == Coordinate(latitude: 41.52, longitude: -81.70))
     }
 
+    @Test func headingComesFromTrackAndIsOptional() throws {
+        let united = try #require(aircraft.first { $0.hex == "a2f1c3" })
+        #expect(united.trackDegrees == 95.2)
+        let vehicle = try #require(aircraft.first { $0.hex == "a3a310" })
+        #expect(vehicle.trackDegrees == nil)
+    }
+
     @Test func groundAltitudeDecodesAsNil() throws {
         let jet = try #require(aircraft.first { $0.hex == "a2c990" })
         #expect(jet.altitudeFeet == nil)

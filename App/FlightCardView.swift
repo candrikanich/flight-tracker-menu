@@ -3,6 +3,7 @@ import SwiftUI
 
 struct FlightCardView: View {
     let tracker: FlightTracker
+    let settings: AppSettings
     let openSettings: () -> Void
     let openSkyLog: () -> Void
 
@@ -37,7 +38,9 @@ struct FlightCardView: View {
                     freshness: Formatting.freshness(
                         seenAt: sighting.seenAt, isCurrent: !isStale, status: tracker.status, now: context.date
                     ),
-                    isStale: isStale
+                    isStale: isStale,
+                    mapHome: settings.showsMap ? settings.home?.coordinate : nil,
+                    path: tracker.tracks.path(for: sighting.plane.aircraft.hex, through: sighting.seenAt)
                 )
             }
         } else {
@@ -76,6 +79,9 @@ private struct SightingDetails: View {
     let freshness: String
     /// A stale card keeps its facts but drops anything that looks live: no red banner, muted numbers.
     let isStale: Bool
+    /// nil hides the map: turned off in Settings, or no home to put on it.
+    let mapHome: Coordinate?
+    let path: [Coordinate]
 
     private var aircraft: Aircraft { sighting.plane.aircraft }
 
@@ -106,6 +112,10 @@ private struct SightingDetails: View {
             }
             heading
             StatsRow(stats: Formatting.stats(sighting.plane), isStale: isStale)
+            if let mapHome {
+                FlightMapView(home: mapHome, aircraft: aircraft, path: path, route: sighting.route)
+                    .opacity(isStale ? 0.6 : 1)
+            }
             details
         }
         .fixedSize(horizontal: false, vertical: true)

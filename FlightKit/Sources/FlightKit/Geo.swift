@@ -4,6 +4,7 @@ public enum Geo {
     static let earthRadiusMiles = 3958.8
     static let earthRadiusNauticalMiles = 3440.065
     static let feetPerMile = 5280.0
+    static let milesPerDegreeLatitude = earthRadiusMiles * .pi / 180
 
     public static func distanceMiles(_ a: Coordinate, _ b: Coordinate) -> Double {
         angularDistance(a, b) * earthRadiusMiles

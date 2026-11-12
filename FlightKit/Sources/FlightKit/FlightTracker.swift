@@ -27,6 +27,7 @@ public final class FlightTracker {
     public private(set) var lastSeen: Sighting?
     public private(set) var status: Status = .loading
     public private(set) var skyLog = SkyLog()
+    public private(set) var tracks = Tracks()
     @ObservationIgnored public var onNewPlane: (@MainActor (Sighting) -> Void)?
 
     public var nextDelay: Duration {
@@ -113,6 +114,10 @@ public final class FlightTracker {
             current = nil
             return
         }
+
+        // Every plane in the feed, not only the one on the card, so a path exists before a plane qualifies.
+        tracks.record(aircraft, at: time)
+        tracks.prune(now: time, keeping: lastSeen?.plane.aircraft.hex)
 
         let inRange = Nearby.qualifying(in: aircraft, home: home, criteria: criteria)
         guard let nearby = inRange.min(by: { $0.distanceMiles < $1.distanceMiles }) else {
