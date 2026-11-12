@@ -139,6 +139,7 @@ private struct MenuBarSection: View {
                 }
             }
             .pickerStyle(.radioGroup)
+            Toggle("Show a map in the card", isOn: $settings.showsMap)
         }
     }
 }

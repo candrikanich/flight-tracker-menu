@@ -51,6 +51,19 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         http.requests.filter { $0.url?.absoluteString.contains(match) == true }.count
     }
 
+    /// The path starts while the plane is still far out, before it qualifies for the card.
+    @Test func everyPlaneInTheFeedGetsAPathAcrossChecks() async {
+        let tracker = makeTracker()
+        serveFeed([("far", "UAL1", 2_000, 8)])
+        await tracker.tick()
+        clock.advance(5)
+        serveFeed([("far", "UAL1", 2_000, 0.3)])
+        await tracker.tick()
+
+        #expect(tracker.current?.plane.aircraft.hex == "far")
+        #expect(tracker.tracks.path(for: "far").count == 2)
+    }
+
     /// Until the first check answers, the card must not claim the sky is empty.
     @Test func statusIsLoadingUntilTheFirstCheckAnswers() async {
         serveFeed([])

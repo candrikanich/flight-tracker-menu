@@ -30,6 +30,7 @@ private struct Record: Decodable {
     let altBaro: Altitude?
     let altGeom: Altitude?
     let gs: Double?
+    let track: Double?
     let baroRate: Int?
     let squawk: String?
     let category: String?
@@ -40,7 +41,7 @@ private struct Record: Decodable {
     let lon: Double?
 
     enum CodingKeys: String, CodingKey {
-        case hex, flight, r, t, desc, ownOp, year, gs, squawk, category, dbFlags, lat, lon
+        case hex, flight, r, t, desc, ownOp, year, gs, track, squawk, category, dbFlags, lat, lon
         case altBaro = "alt_baro"
         case altGeom = "alt_geom"
         case baroRate = "baro_rate"
@@ -68,6 +69,7 @@ private struct Record: Decodable {
             squawk: squawk.nonBlank,
             category: category.nonBlank,
             isMilitary: (dbFlags?.value ?? 0) & 1 != 0,
+            trackDegrees: track.flatMap { (0..<360).contains($0) ? $0 : nil },
             coordinate: Coordinate(latitude: lat, longitude: lon)
         )
     }

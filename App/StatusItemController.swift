@@ -34,6 +34,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.contentViewController = NSHostingController(
             rootView: FlightCardView(
                 tracker: tracker,
+                settings: settings,
                 openSettings: { [weak self] in
                     self?.popover.performClose(nil)
                     openSettings()
