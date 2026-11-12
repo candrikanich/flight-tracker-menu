@@ -66,6 +66,30 @@ import Testing
         #expect(Formatting.menuBarText(nearby(plane()), route: noIATA) == "✈︎ UA1365 → KXYZ · 0.4 mi · 2,100 ft")
     }
 
+    @Test func flightTitlePrefersTheRouteAirlineThenTheCallsignPrefix() {
+        #expect(Formatting.flightTitle(callsign: "UAL1365", registration: nil, routeAirline: "United") == "United UA1365")
+        #expect(Formatting.flightTitle(callsign: "UAL1365", registration: nil, routeAirline: nil) == "United Airlines UA1365")
+        #expect(Formatting.flightTitle(callsign: nil, registration: "N27733", routeAirline: nil) == "N27733")
+    }
+
+    @Test func placeNamesTheCityAndCode() {
+        #expect(Formatting.place(cleToEwr.destination) == "Newark (EWR)")
+        let noIata = Airport(iata: nil, icao: "KCGF", name: "Cuyahoga County", city: nil, coordinate: cle)
+        #expect(Formatting.place(noIata) == "Cuyahoga County (KCGF)")
+    }
+
+    @Test func phaseReadsAsPlainWords() {
+        #expect(Formatting.phase(.arriving) == "Arriving CLE")
+        #expect(Formatting.phase(.passingOver) == "Passing over")
+    }
+
+    @Test func onlyEmergencySquawksGetALabel() {
+        #expect(Formatting.emergency(squawk: "7700") == "Emergency squawk 7700")
+        #expect(Formatting.emergency(squawk: "7600") == "Emergency squawk 7600 radio failure")
+        #expect(Formatting.emergency(squawk: "1200") == nil)
+        #expect(Formatting.emergency(squawk: nil) == nil)
+    }
+
     @Test func flightLabelWithNothingKnown() {
         #expect(Formatting.flightLabel(callsign: nil, registration: nil) == "Unknown aircraft")
     }
