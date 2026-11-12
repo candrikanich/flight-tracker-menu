@@ -56,6 +56,24 @@ public enum Formatting {
         }
     }
 
+    public static func tallyHeadline(count: Int) -> String {
+        "\(count) \(count == 1 ? "plane" : "planes") over you today"
+    }
+
+    /// "Busiest around 6 PM · Mostly United Airlines", or nil when nothing stands out.
+    public static func tallyDetails(_ tally: DailyTally, calendar: Calendar) -> String? {
+        var parts: [String] = []
+        if let hour = tally.busiestHour {
+            var style = Date.FormatStyle(date: .omitted, time: .omitted).locale(usEnglish)
+            style.timeZone = calendar.timeZone
+            parts.append("Busiest around \(hour.formatted(style.hour(.defaultDigits(amPM: .abbreviated))))")
+        }
+        if let airline = tally.topAirline {
+            parts.append("Mostly \(airline)")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     /// Section title for a day in the sky log.
     public static func dayTitle(_ date: Date, now: Date, calendar: Calendar) -> String {
         if calendar.isDate(date, inSameDayAs: now) { return "Today" }
