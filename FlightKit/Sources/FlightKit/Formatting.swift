@@ -28,9 +28,16 @@ public enum Formatting {
 
     /// "United Airlines UA1365": the route source's airline name wins over the callsign-prefix lookup.
     public static func flightTitle(callsign: String?, registration: String?, routeAirline: String?) -> String {
+        flightName(callsign: callsign, registration: registration, routeAirline: routeAirline, separator: " ")
+    }
+
+    /// One airline-precedence rule for the card and the Sky Log, which differ only in the separator.
+    static func flightName(
+        callsign: String?, registration: String?, routeAirline: String?, separator: String
+    ) -> String {
         let label = flightLabel(callsign: callsign, registration: registration)
         let airline = routeAirline ?? callsign.flatMap(Lookups.airline(forCallsign:))?.name
-        return airline.map { "\($0) \(label)" } ?? label
+        return airline.map { "\($0)\(separator)\(label)" } ?? label
     }
 
     public static func place(_ airport: Airport) -> String {
@@ -111,5 +118,5 @@ public enum Formatting {
     }
 
     /// Fixed so the menu bar reads the same regardless of system region; the app's copy is English-only.
-    private static let usEnglish = Locale(identifier: "en_US")
+    static let usEnglish = Locale(identifier: "en_US")
 }

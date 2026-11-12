@@ -51,6 +51,15 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         http.requests.filter { $0.url?.absoluteString.contains(match) == true }.count
     }
 
+    /// Until the first check answers, the card must not claim the sky is empty.
+    @Test func statusIsLoadingUntilTheFirstCheckAnswers() async {
+        serveFeed([])
+        let tracker = makeTracker()
+        #expect(tracker.status == .loading)
+        await tracker.tick()
+        #expect(tracker.status == .idle)
+    }
+
     @Test func currentIsTheCloserOfTwoQualifyingPlanes() async {
         serveFeed([("far", "UAL1", 2_000, 1.2), ("near", "UAL2", 2_000, 0.3)])
         let tracker = makeTracker()

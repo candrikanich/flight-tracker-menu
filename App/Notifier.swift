@@ -23,7 +23,7 @@ final class Notifier {
         }
         content.body = sighting.route.map { route in
             "\(route.origin.city ?? route.origin.icao) → \(route.destination.city ?? route.destination.icao)"
-        } ?? "route unknown"
+        } ?? "Route unavailable"
         content.sound = nil
         content.interruptionLevel = .passive
         let request = UNNotificationRequest(identifier: sighting.plane.aircraft.hex, content: content, trigger: nil)
