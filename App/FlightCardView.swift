@@ -52,7 +52,8 @@ struct FlightCardView: View {
                         seenAt: sighting.seenAt, isCurrent: !isStale, status: tracker.status, now: context.date
                     ),
                     isStale: isStale,
-                    mapHome: settings.showsMap ? settings.home?.coordinate : nil,
+                    mapHome: settings.mapMode == .off ? nil : settings.home?.coordinate,
+                    showsFullRoute: settings.mapMode == .fullRoute,
                     path: tracker.tracks.path(for: sighting.plane.aircraft.hex, through: sighting.seenAt)
                 )
             }
@@ -97,6 +98,7 @@ private struct SightingDetails: View {
     let isStale: Bool
     /// nil hides the map: turned off in Settings, or no home to put on it.
     let mapHome: Coordinate?
+    let showsFullRoute: Bool
     let path: [Coordinate]
 
     private var aircraft: Aircraft { sighting.plane.aircraft }
@@ -129,7 +131,10 @@ private struct SightingDetails: View {
             heading
             StatsRow(stats: Formatting.stats(sighting.plane, isStale: isStale), isStale: isStale)
             if let mapHome {
-                FlightMapView(home: mapHome, aircraft: aircraft, path: path, route: sighting.route)
+                FlightMapView(
+                    home: mapHome, aircraft: aircraft, path: path, route: sighting.route,
+                    showsFullRoute: showsFullRoute
+                )
                     .opacity(isStale ? 0.6 : 1)
             }
             details

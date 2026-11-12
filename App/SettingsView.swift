@@ -139,7 +139,20 @@ private struct MenuBarSection: View {
                 }
             }
             .pickerStyle(.radioGroup)
-            Toggle("Show a map in the card", isOn: $settings.showsMap)
+            Picker("Map in the card", selection: $settings.mapMode) {
+                Text("Off").tag(MapMode.off)
+                Text("Nearby").tag(MapMode.nearby)
+                Text("Full route").tag(MapMode.fullRoute)
+            }
+            Text(mapDetail).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var mapDetail: String {
+        switch settings.mapMode {
+        case .off: "No map, just the details."
+        case .nearby: "Home, the plane, and the path it flew while nearby."
+        case .fullRoute: "The whole trip from origin to destination, when the route is known; nearby otherwise."
         }
     }
 }

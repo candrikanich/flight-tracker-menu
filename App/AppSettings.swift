@@ -33,7 +33,7 @@ final class AppSettings {
     var criteria: NearbyCriteria { didSet { save(criteria, for: .criteria) } }
     var quietHours: QuietHours { didSet { save(quietHours, for: .quietHours) } }
     var notificationScope: NotificationScope { didSet { save(notificationScope, for: .notificationScope) } }
-    var showsMap: Bool { didSet { save(showsMap, for: .showsMap) } }
+    var mapMode: MapMode { didSet { save(mapMode, for: .mapMode) } }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -45,13 +45,14 @@ final class AppSettings {
         quietHours = Self.load(QuietHours.self, .quietHours, from: defaults) ?? .default
         notificationScope = Self.load(NotificationScope.self, .notificationScope, from: defaults)
             ?? NotificationScope(legacyEnabled: Self.load(Bool.self, .notificationsEnabled, from: defaults))
-        showsMap = Self.load(Bool.self, .showsMap, from: defaults) ?? true
+        mapMode = Self.load(MapMode.self, .mapMode, from: defaults)
+            ?? MapMode(legacyShowsMap: Self.load(Bool.self, .showsMap, from: defaults))
     }
 
     private enum Key: String {
-        case home, style, criteria, quietHours, notificationScope, showsMap
-        /// The old on/off switch: read once to carry it over, never written again.
-        case notificationsEnabled
+        case home, style, criteria, quietHours, notificationScope, mapMode
+        /// Old on/off switches: read once to carry them over, never written again.
+        case notificationsEnabled, showsMap
     }
 
     private func save<T: Encodable>(_ value: T, for key: Key) {
