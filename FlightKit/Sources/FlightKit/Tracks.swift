@@ -62,7 +62,10 @@ public enum MapFraming {
     static let padding = 1.3
 
     public static func region(home: Coordinate, plane: Coordinate, path: [Coordinate]) -> Region {
-        let points = [home, plane] + path
+        region(fitting: [home, plane] + path)
+    }
+
+    static func region(fitting points: [Coordinate]) -> Region {
         let latitudes = points.map(\.latitude)
         let longitudes = points.map(\.longitude)
         let (south, north) = (latitudes.min()!, latitudes.max()!)
@@ -73,8 +76,8 @@ public enum MapFraming {
         let minimumLongitudeDelta = minimumLatitudeDelta / cos(center.latitude * .pi / 180)
         return Region(
             center: center,
-            latitudeDelta: max((north - south) * padding, minimumLatitudeDelta),
-            longitudeDelta: max((east - west) * padding, minimumLongitudeDelta)
+            latitudeDelta: min(max((north - south) * padding, minimumLatitudeDelta), 180),
+            longitudeDelta: min(max((east - west) * padding, minimumLongitudeDelta), 360)
         )
     }
 }
