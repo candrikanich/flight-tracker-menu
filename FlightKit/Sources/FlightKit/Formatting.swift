@@ -56,6 +56,16 @@ public enum Formatting {
         }
     }
 
+    public static func rarity(_ rarity: Rarity) -> String {
+        switch rarity {
+        case .emergency(let squawk): emergency(squawk: squawk) ?? "Emergency squawk \(squawk)"
+        case .notableType(let name), .specialOperator(let name): name
+        case .military: "Military"
+        case .helicopter: "Helicopter"
+        case .vintage(let year): "Vintage, built \(year)"
+        }
+    }
+
     public static func tallyHeadline(count: Int) -> String {
         "\(count) \(count == 1 ? "plane" : "planes") over you today"
     }

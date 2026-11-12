@@ -10,9 +10,17 @@ final class Notifier {
         (try? await center.requestAuthorization(options: [.alert])) ?? false
     }
 
-    func post(_ sighting: FlightTracker.Sighting) {
+    func post(_ sighting: FlightTracker.Sighting, rarity: Rarity?) {
         let content = UNMutableNotificationContent()
-        content.title = Formatting.summary(sighting.plane, route: sighting.route)
+        let summary = Formatting.summary(sighting.plane, route: sighting.route)
+        if let rarity {
+            let label = Formatting.rarity(rarity)
+            // "Rare" would understate an emergency.
+            if case .emergency = rarity { content.title = label } else { content.title = "Rare: \(label)" }
+            content.subtitle = summary
+        } else {
+            content.title = summary
+        }
         content.body = sighting.route.map { route in
             "\(route.origin.city ?? route.origin.icao) → \(route.destination.city ?? route.destination.icao)"
         } ?? "route unknown"

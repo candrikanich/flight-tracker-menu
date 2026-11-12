@@ -42,7 +42,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             statusItem?.planeAppeared(sighting)
             let cardVisible = statusItem?.isPopoverShown ?? false
-            if settings.notificationsEnabled, !cardVisible { notifier.post(sighting) }
+            let rarity = Rarity.of(sighting.plane.aircraft)
+            if settings.notificationScope.includes(rarity: rarity), !cardVisible {
+                notifier.post(sighting, rarity: rarity)
+            }
         }
         applySettings()
         tracker.start()

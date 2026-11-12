@@ -14,6 +14,29 @@ func fixture(_ name: String) throws -> Data {
         aircraft = try FeedDecoding.aircraft(from: fixture("adsbfi-cle"))
     }
 
+    /// adsb.fi `dbFlags`: bit 1 is military; bit 8 (LADD, a privacy list) must not count.
+    @Test func militaryComesFromTheFirstDbFlagsBit() throws {
+        let json = """
+        {"aircraft":[
+        {"hex":"ae01ce","dbFlags":1,"alt_baro":5000,"lat":41.4,"lon":-81.8},
+        {"hex":"a2c990","dbFlags":8,"alt_baro":5000,"lat":41.4,"lon":-81.8},
+        {"hex":"a2f1c3","alt_baro":5000,"lat":41.4,"lon":-81.8}
+        ]}
+        """
+        let decoded = try FeedDecoding.aircraft(from: Data(json.utf8))
+
+        #expect(decoded.map(\.isMilitary) == [true, false, false])
+    }
+
+    /// The flag only adds a badge, so a malformed value must not hide the plane.
+    @Test func malformedDbFlagsKeepsThePlane() throws {
+        let json = #"{"aircraft":[{"hex":"ae01ce","dbFlags":"1","alt_baro":5000,"lat":41.4,"lon":-81.8}]}"#
+        let decoded = try FeedDecoding.aircraft(from: Data(json.utf8))
+
+        #expect(decoded.map(\.hex) == ["ae01ce"])
+        #expect(decoded.first?.isMilitary == false)
+    }
+
     @Test func airlinerDecodesEveryField() throws {
         let united = try #require(aircraft.first { $0.hex == "a2f1c3" })
         #expect(united.callsign == "UAL1365")

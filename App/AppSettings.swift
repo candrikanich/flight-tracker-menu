@@ -32,7 +32,7 @@ final class AppSettings {
     var style: MenuBarStyle { didSet { save(style, for: .style) } }
     var criteria: NearbyCriteria { didSet { save(criteria, for: .criteria) } }
     var quietHours: QuietHours { didSet { save(quietHours, for: .quietHours) } }
-    var notificationsEnabled: Bool { didSet { save(notificationsEnabled, for: .notificationsEnabled) } }
+    var notificationScope: NotificationScope { didSet { save(notificationScope, for: .notificationScope) } }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -42,11 +42,14 @@ final class AppSettings {
         style = Self.load(MenuBarStyle.self, .style, from: defaults) ?? .liveText
         criteria = Self.load(NearbyCriteria.self, .criteria, from: defaults) ?? NearbyCriteria()
         quietHours = Self.load(QuietHours.self, .quietHours, from: defaults) ?? .default
-        notificationsEnabled = Self.load(Bool.self, .notificationsEnabled, from: defaults) ?? false
+        notificationScope = Self.load(NotificationScope.self, .notificationScope, from: defaults)
+            ?? NotificationScope(legacyEnabled: Self.load(Bool.self, .notificationsEnabled, from: defaults))
     }
 
     private enum Key: String {
-        case home, style, criteria, quietHours, notificationsEnabled
+        case home, style, criteria, quietHours, notificationScope
+        /// The old on/off switch: read once to carry it over, never written again.
+        case notificationsEnabled
     }
 
     private func save<T: Encodable>(_ value: T, for key: Key) {

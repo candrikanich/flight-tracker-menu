@@ -169,21 +169,27 @@ private struct NotificationsSection: View {
 
     var body: some View {
         Section("Notifications") {
-            Toggle("Silent banner when a plane comes overhead", isOn: Binding(
-                get: { settings.notificationsEnabled },
-                set: { enable in
-                    guard enable else {
-                        settings.notificationsEnabled = false
+            Picker("Silent banner for", selection: Binding(
+                get: { settings.notificationScope },
+                set: { scope in
+                    guard scope != .off else {
+                        settings.notificationScope = .off
                         return
                     }
                     Task {
                         let granted = await notifier.requestAuthorization()
-                        settings.notificationsEnabled = granted
+                        settings.notificationScope = granted ? scope : .off
                         denied = !granted
                     }
                 }
-            ))
+            )) {
+                ForEach(NotificationScope.allCases, id: \.self) { Text($0.title) }
+            }
             .disabled(cardIsTheAlert)
+            if settings.notificationScope == .rarePlanes {
+                Text("Military, helicopters, 747s and A380s, NASA, vintage aircraft and emergencies.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if cardIsTheAlert {
                 let style = MenuBarStyle.autoOpenCard.title
                 Text("With \"\(style)\" the card opening is the alert, so no banners are sent.")
@@ -245,5 +251,15 @@ private struct LaunchAtLoginSection: View {
             if let error { Text(error).font(.caption).foregroundStyle(.secondary) }
         }
         .onAppear { enabled = SMAppService.mainApp.status == .enabled }
+    }
+}
+
+private extension NotificationScope {
+    var title: String {
+        switch self {
+        case .off: "Nothing"
+        case .rarePlanes: "Rare planes only"
+        case .everyPlane: "Every plane overhead"
+        }
     }
 }

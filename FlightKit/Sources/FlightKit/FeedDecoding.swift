@@ -33,11 +33,14 @@ private struct Record: Decodable {
     let baroRate: Int?
     let squawk: String?
     let category: String?
+    /// Bit 1 is military; the others (interesting, PIA, LADD) aren't used. Lossy because it only adds a
+    /// badge, so a malformed value must not drop the whole plane.
+    let dbFlags: Lossy<Int>?
     let lat: Double?
     let lon: Double?
 
     enum CodingKeys: String, CodingKey {
-        case hex, flight, r, t, desc, ownOp, year, gs, squawk, category, lat, lon
+        case hex, flight, r, t, desc, ownOp, year, gs, squawk, category, dbFlags, lat, lon
         case altBaro = "alt_baro"
         case altGeom = "alt_geom"
         case baroRate = "baro_rate"
@@ -64,6 +67,7 @@ private struct Record: Decodable {
             verticalRateFpm: baroRate,
             squawk: squawk.nonBlank,
             category: category.nonBlank,
+            isMilitary: (dbFlags?.value ?? 0) & 1 != 0,
             coordinate: Coordinate(latitude: lat, longitude: lon)
         )
     }
