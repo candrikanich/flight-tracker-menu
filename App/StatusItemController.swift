@@ -18,7 +18,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     var isPopoverShown: Bool { popover.isShown }
 
-    init(tracker: FlightTracker, settings: AppSettings, openSettings: @escaping () -> Void) {
+    init(
+        tracker: FlightTracker,
+        settings: AppSettings,
+        openSettings: @escaping () -> Void,
+        openSkyLog: @escaping () -> Void
+    ) {
         self.tracker = tracker
         self.settings = settings
         super.init()
@@ -27,10 +32,17 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.animates = false
         popover.delegate = self
         popover.contentViewController = NSHostingController(
-            rootView: FlightCardView(tracker: tracker, openSettings: { [weak self] in
-                self?.popover.performClose(nil)
-                openSettings()
-            })
+            rootView: FlightCardView(
+                tracker: tracker,
+                openSettings: { [weak self] in
+                    self?.popover.performClose(nil)
+                    openSettings()
+                },
+                openSkyLog: { [weak self] in
+                    self?.popover.performClose(nil)
+                    openSkyLog()
+                }
+            )
         )
 
         statusItem.button?.target = self

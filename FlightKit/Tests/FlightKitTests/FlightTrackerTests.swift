@@ -90,6 +90,61 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         #expect(tracker.current == nil)
     }
 
+    @Test func skyLogRecordsThePlaneTheCardShowsOncePerPass() async {
+        serveFeed([("far", "UAL1", 2_000, 1.2), ("near", "UAL2", 2_000, 0.6)])
+        let tracker = makeTracker()
+        await tracker.tick()
+        clock.advance(5)
+        serveFeed([("near", "UAL2", 2_000, 0.2)])
+        await tracker.tick()
+
+        #expect(tracker.skyLog.passes.map(\.hex) == ["near"])
+        #expect(tracker.skyLog.passes.first?.closestMiles ?? 0 < 0.3)
+    }
+
+    @Test func planeThatStaysInRangeWhileAnotherIsCloserIsStillOnePass() async {
+        serveFeed([("a", "UAL1", 2_000, 0.3), ("b", "UAL2", 2_000, 1.2)])
+        let tracker = makeTracker()
+        await tracker.tick()
+        for _ in 0..<40 {
+            clock.advance(5)
+            serveFeed([("a", "UAL1", 2_000, 1.0), ("b", "UAL2", 2_000, 0.2)])
+            await tracker.tick()
+        }
+        clock.advance(5)
+        serveFeed([("a", "UAL1", 2_000, 0.1), ("b", "UAL2", 2_000, 1.4)])
+        await tracker.tick()
+
+        #expect(tracker.skyLog.passes.map(\.hex) == ["a", "b"])
+        #expect(tracker.skyLog.passes.first?.closestMiles ?? 1 < 0.2)
+    }
+
+    @Test func restoringDropsPassesOlderThanThirtyDays() async {
+        serveFeed([("old", "UAL1", 2_000, 0.3)])
+        let earlier = makeTracker()
+        await earlier.tick()
+
+        clock.advance(SkyLog.retention + 60)
+        let relaunched = makeTracker()
+        relaunched.restore(earlier.skyLog)
+
+        #expect(relaunched.skyLog.passes.isEmpty)
+    }
+
+    @Test func restoredSkyLogKeepsEarlierPassesAndAddsNewOnes() async {
+        serveFeed([("first", "UAL1", 2_000, 0.3)])
+        let earlier = makeTracker()
+        await earlier.tick()
+
+        clock.advance(600)
+        serveFeed([("second", "UAL2", 2_000, 0.3)])
+        let relaunched = makeTracker()
+        relaunched.restore(earlier.skyLog)
+        await relaunched.tick()
+
+        #expect(relaunched.skyLog.passes.map(\.hex) == ["first", "second"])
+    }
+
     @Test func failuresBackOffThenRecover() async {
         http.on("adsb.fi", status: 503)
         let tracker = makeTracker()

@@ -4,6 +4,7 @@ import SwiftUI
 struct FlightCardView: View {
     let tracker: FlightTracker
     let openSettings: () -> Void
+    let openSkyLog: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -11,6 +12,7 @@ struct FlightCardView: View {
             Divider()
             HStack {
                 Button("Settings…", systemImage: "gearshape", action: openSettings)
+                Button("Sky log", systemImage: "clock.arrow.circlepath", action: openSkyLog)
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
             }
@@ -81,29 +83,17 @@ private struct SightingDetails: View {
     }
 
     private var title: String {
-        let label = Formatting.flightLabel(callsign: aircraft.callsign, registration: aircraft.registration)
-        let airline = sighting.route?.airlineName ?? aircraft.callsign.flatMap(Lookups.airline(forCallsign:))?.name
-        return airline.map { "\($0) \(label)" } ?? label
+        Formatting.flightTitle(
+            callsign: aircraft.callsign, registration: aircraft.registration, routeAirline: sighting.route?.airlineName
+        )
     }
 
     private var routeText: String {
         guard let route = sighting.route else { return "route unknown" }
-        return "\(place(route.origin)) → \(place(route.destination))"
+        return "\(Formatting.place(route.origin)) → \(Formatting.place(route.destination))"
     }
 
-    private func place(_ airport: Airport) -> String {
-        "\(airport.city ?? airport.name) (\(airport.iata ?? airport.icao))"
-    }
-
-    private var phaseText: String {
-        switch sighting.phase {
-        case .arriving: "Arriving CLE"
-        case .departing: "Departing CLE"
-        case .passingOver: "Passing over"
-        case .climbing: "Climbing"
-        case .descending: "Descending"
-        }
-    }
+    private var phaseText: String { Formatting.phase(sighting.phase) }
 
     private var milesText: String {
         sighting.plane.distanceMiles.formatted(.number.precision(.fractionLength(1)))
@@ -116,12 +106,5 @@ private struct SightingDetails: View {
         return "\(registration) · built \(year) (\(age) yrs)"
     }
 
-    private var emergencyText: String? {
-        switch aircraft.squawk {
-        case "7700": "Emergency squawk 7700"
-        case "7600": "Emergency squawk 7600 radio failure"
-        case "7500": "Emergency squawk 7500 hijack"
-        default: nil
-        }
-    }
+    private var emergencyText: String? { Formatting.emergency(squawk: aircraft.squawk) }
 }

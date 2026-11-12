@@ -72,7 +72,7 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
     }
 }
 
-public struct Airport: Sendable, Equatable {
+public struct Airport: Sendable, Equatable, Codable {
     public let iata: String?
     public let icao: String
     public let name: String
@@ -88,7 +88,7 @@ public struct Airport: Sendable, Equatable {
     }
 }
 
-public struct Route: Sendable, Equatable {
+public struct Route: Sendable, Equatable, Codable {
     public let airlineName: String?
     public let origin: Airport
     public let destination: Airport
@@ -104,6 +104,6 @@ public enum TrafficFilter: String, CaseIterable, Sendable, Codable {
     case airport, passingOver, all
 }
 
-public enum FlightPhase: Sendable, Equatable {
+public enum FlightPhase: String, Sendable, Equatable, Codable {
     case arriving, departing, passingOver, climbing, descending
 }

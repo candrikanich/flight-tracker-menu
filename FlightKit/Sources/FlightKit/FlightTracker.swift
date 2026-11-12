@@ -16,7 +16,7 @@ public final class FlightTracker {
     }
 
     /// A plane that has been out of view this long is announced again when it reappears.
-    static let reannounceAfter: TimeInterval = 120
+    nonisolated static let reannounceAfter: TimeInterval = 120
     /// A failed route lookup is not retried sooner than this, so a struggling source isn't hit every poll.
     static let routeRetryAfter: TimeInterval = 60
     /// Free route databases get corrected, and a flight number can fly a different route another day.
@@ -26,6 +26,7 @@ public final class FlightTracker {
     public private(set) var current: Sighting?
     public private(set) var lastSeen: Sighting?
     public private(set) var status: Status = .idle
+    public private(set) var skyLog = SkyLog()
     @ObservationIgnored public var onNewPlane: (@MainActor (Sighting) -> Void)?
 
     public var nextDelay: Duration {
@@ -63,6 +64,12 @@ public final class FlightTracker {
         self.home = home
         self.criteria = criteria
         self.quietHours = quietHours
+    }
+
+    /// Brings back the history saved last session. Call before `start()` so no new pass is overwritten.
+    public func restore(_ log: SkyLog) {
+        skyLog = log
+        skyLog.prune(now: now())
     }
 
     public func start() {
@@ -126,6 +133,7 @@ public final class FlightTracker {
         )
         current = sighting
         lastSeen = sighting
+        skyLog.record(sighting, startsNewPass: isNewPass)
         if isNewPass { onNewPlane?(sighting) }
     }
 

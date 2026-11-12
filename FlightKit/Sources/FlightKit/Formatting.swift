@@ -26,6 +26,48 @@ public enum Formatting {
         }
     }
 
+    /// "United Airlines UA1365": the route source's airline name wins over the callsign-prefix lookup.
+    public static func flightTitle(callsign: String?, registration: String?, routeAirline: String?) -> String {
+        let label = flightLabel(callsign: callsign, registration: registration)
+        let airline = routeAirline ?? callsign.flatMap(Lookups.airline(forCallsign:))?.name
+        return airline.map { "\($0) \(label)" } ?? label
+    }
+
+    public static func place(_ airport: Airport) -> String {
+        "\(airport.city ?? airport.name) (\(airport.iata ?? airport.icao))"
+    }
+
+    public static func phase(_ phase: FlightPhase) -> String {
+        switch phase {
+        case .arriving: "Arriving CLE"
+        case .departing: "Departing CLE"
+        case .passingOver: "Passing over"
+        case .climbing: "Climbing"
+        case .descending: "Descending"
+        }
+    }
+
+    public static func emergency(squawk: String?) -> String? {
+        switch squawk {
+        case "7700": "Emergency squawk 7700"
+        case "7600": "Emergency squawk 7600 radio failure"
+        case "7500": "Emergency squawk 7500 hijack"
+        default: nil
+        }
+    }
+
+    /// Section title for a day in the sky log.
+    public static func dayTitle(_ date: Date, now: Date, calendar: Calendar) -> String {
+        if calendar.isDate(date, inSameDayAs: now) { return "Today" }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: yesterday) {
+            return "Yesterday"
+        }
+        var style = Date.FormatStyle(date: .complete, time: .omitted).locale(usEnglish)
+        style.timeZone = calendar.timeZone
+        return date.formatted(style.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
     /// IATA flight number when the airline is known (`UAL1365` → `UA1365`), else the callsign, else the registration.
     public static func flightLabel(callsign: String?, registration: String?) -> String {
         if let callsign {
