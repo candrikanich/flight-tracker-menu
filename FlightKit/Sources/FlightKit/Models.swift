@@ -13,10 +13,13 @@ public struct Coordinate: Sendable, Hashable, Codable {
 public struct Home: Sendable, Codable, Equatable {
     public var coordinate: Coordinate
     public var groundElevationFeet: Double
+    /// What the user typed to find home, shown again in Settings. Optional so homes saved before it existed still load.
+    public var address: String?
 
-    public init(coordinate: Coordinate, groundElevationFeet: Double) {
+    public init(coordinate: Coordinate, groundElevationFeet: Double, address: String? = nil) {
         self.coordinate = coordinate
         self.groundElevationFeet = groundElevationFeet
+        self.address = address
     }
 }
 
