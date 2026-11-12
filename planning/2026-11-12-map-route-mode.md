@@ -20,9 +20,17 @@
 - **Arc framing:** the tile frames the arc itself, not just the two airports. A long trip bows toward the pole: CLE to London peaks above 53°N, north of both airports.
 - **Tile height:** still 150 pt. A wider frame needs no more room to read.
 
+- **Date line:** a route across it falls back to Nearby. The arc's longitudes wrap, so the frame would center on the wrong side of the world. Overflights from the East Coast to Asia do this.
+
 ## Not in this change
-- Routes that cross the date line, which would frame badly. Nothing from CLE does that.
+- Drawing routes across the date line properly, which would mean unwrapping longitudes and splitting the line.
 - Tapping the map to switch modes.
+
+## Review
+pr-review-toolkit:code-reviewer (opus) confirmed the slerp math, the migration, and the macOS 14 MapKit APIs.
+- **Fixed, Important:** my note that "nothing from CLE crosses the date line" was wrong, because the Passing over and All traffic filters show overflights. An IAD→HND flight would have produced a region over 360° wide, centered over Africa, and MapKit can reject such a region. That route now falls back to Nearby, and every framing span is clamped. The tests `aRouteAcrossTheDateLineIsNotFramed` and `framingNeverExceedsTheWholeGlobe` failed first.
+- **Fixed, minor:** renamed `MapStyle` to `MapMode`, so it can't be confused with MapKit's `MapStyle`, which the tile already uses. Added `aShortHopKeepsTheMinimumSpan`, which passes on the existing code.
+- **Deferred, minor:** with the default airport filter, the plane draws on top of CLE's dot and label. Check on device whether that looks wrong. If it does, hide the label of an airport within a few miles of the plane.
 
 ## Unresolved questions
 - Map tiles don't render off-device, so the full-route look hasn't been seen yet. Check on device:
