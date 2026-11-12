@@ -12,7 +12,10 @@ struct FlightCardView: View {
             content
             Divider().padding(.vertical, 12)
             TimelineView(.everyMinute) { context in
-                TallyLine(tally: DailyTally(passes: tracker.skyLog.passes, on: context.date, calendar: .current))
+                VStack(alignment: .leading, spacing: 6) {
+                    TallyLine(tally: DailyTally(passes: tracker.skyLog.passes, on: context.date, calendar: .current))
+                    runwayLine(now: context.date)
+                }
             }
             HStack(spacing: 12) {
                 Button("Settings…", systemImage: "gearshape", action: openSettings)
@@ -27,6 +30,16 @@ struct FlightCardView: View {
         }
         .padding(16)
         .frame(width: 320)
+    }
+
+    /// Explains why a day is busy or quiet over the house. Hidden until enough traffic agrees.
+    @ViewBuilder private func runwayLine(now: Date) -> some View {
+        if let flow = tracker.runwayFlow.flow(now: now) {
+            let overHome = settings.home.flatMap { RunwayFlowWatch.overHome(flow, home: $0.coordinate) }
+            Text(Formatting.runwayLine(flow, overHome: overHome))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder private var content: some View {
