@@ -84,6 +84,12 @@ private struct SightingDetails: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(.red, in: .rect(cornerRadius: 6))
             }
+            if let rare = rareText {
+                Label(rare, systemImage: "sparkles")
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(.quaternary, in: .capsule)
+            }
             Text(title).font(.title3.bold())
             if let type = aircraft.typeDescription ?? aircraft.typeCode {
                 Text(type).foregroundStyle(.secondary)
@@ -128,4 +134,12 @@ private struct SightingDetails: View {
     }
 
     private var emergencyText: String? { Formatting.emergency(squawk: aircraft.squawk) }
+
+    /// An emergency already has its own red banner, so it doesn't get a second badge.
+    private var rareText: String? {
+        switch Rarity.of(aircraft) {
+        case nil, .emergency: nil
+        case let rarity?: "Rare · \(Formatting.rarity(rarity))"
+        }
+    }
 }

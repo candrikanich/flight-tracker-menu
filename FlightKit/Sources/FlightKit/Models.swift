@@ -37,6 +37,8 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
     public let verticalRateFpm: Int?
     public let squawk: String?
     public let category: String?
+    /// From the feed's aircraft database, not guessed from the callsign.
+    public let isMilitary: Bool
     public let coordinate: Coordinate
 
     public var id: String { hex }
@@ -54,6 +56,7 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
         verticalRateFpm: Int? = nil,
         squawk: String? = nil,
         category: String? = nil,
+        isMilitary: Bool = false,
         coordinate: Coordinate
     ) {
         self.hex = hex
@@ -68,6 +71,7 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
         self.verticalRateFpm = verticalRateFpm
         self.squawk = squawk
         self.category = category
+        self.isMilitary = isMilitary
         self.coordinate = coordinate
     }
 }
