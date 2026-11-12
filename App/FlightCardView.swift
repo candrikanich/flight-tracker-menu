@@ -7,42 +7,48 @@ struct FlightCardView: View {
     let openSkyLog: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             content
+            Divider().padding(.vertical, 12)
             TimelineView(.everyMinute) { context in
                 TallyLine(tally: DailyTally(passes: tracker.skyLog.passes, on: context.date, calendar: .current))
             }
-            Divider()
-            HStack {
+            HStack(spacing: 12) {
                 Button("Settings…", systemImage: "gearshape", action: openSettings)
                 Button("Sky log", systemImage: "clock.arrow.circlepath", action: openSkyLog)
                 Spacer()
                 Button("Quit") { NSApp.terminate(nil) }
+                    .foregroundStyle(.secondary)
             }
+            .font(.system(size: 12))
             .buttonStyle(.borderless)
+            .padding(.top, 12)
         }
         .padding(16)
-        .frame(width: 300)
+        .frame(width: 320)
     }
 
     @ViewBuilder private var content: some View {
-        if let sighting = tracker.current {
-            SightingDetails(sighting: sighting, header: nil)
-        } else if let sighting = tracker.lastSeen {
+        if let sighting = tracker.current ?? tracker.lastSeen {
+            let isStale = tracker.current == nil
             TimelineView(.everyMinute) { context in
-                SightingDetails(sighting: sighting, header: Formatting.lastSeen(sighting.seenAt, now: context.date))
+                SightingDetails(
+                    sighting: sighting,
+                    freshness: Formatting.freshness(
+                        seenAt: sighting.seenAt, isCurrent: !isStale, status: tracker.status, now: context.date
+                    ),
+                    isStale: isStale
+                )
             }
         } else {
-            Text(emptyMessage).foregroundStyle(.secondary)
-        }
-    }
-
-    private var emptyMessage: String {
-        switch tracker.status {
-        case .quiet: "Quiet hours. Planes will show again when they end."
-        case .offline: "Can't reach the flight feed right now."
-        case .idle: "No planes overhead yet."
-        case .needsHome: "Set your home location in Settings, then click Save location."
+            let state = Formatting.emptyState(tracker.status)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(state.title).font(.system(size: 13, weight: .medium))
+                if let detail = state.detail {
+                    Text(detail).font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -54,92 +60,128 @@ private struct TallyLine: View {
     var body: some View {
         if tally.count > 0 {
             VStack(alignment: .leading, spacing: 2) {
-                Text(Formatting.tallyHeadline(count: tally.count))
+                Text(Formatting.tallyHeadline(count: tally.count)).foregroundStyle(.primary)
                 if let details = Formatting.tallyDetails(tally, calendar: .current) {
-                    Text(details)
+                    Text(details).foregroundStyle(.secondary)
                 }
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .font(.system(size: 12))
         }
     }
 }
 
 private struct SightingDetails: View {
     let sighting: FlightTracker.Sighting
-    let header: String?
+    /// "Nearby now" or "Last seen 2 min ago": words, not a colored dot, so fresh and stale can't be confused.
+    let freshness: String
+    /// A stale card keeps its facts but drops anything that looks live: no red banner, muted numbers.
+    let isStale: Bool
 
     private var aircraft: Aircraft { sighting.plane.aircraft }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let header {
-                Text(header).font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(freshness)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                if let emergency = Formatting.emergency(squawk: aircraft.squawk), isStale {
+                    Label(emergency, systemImage: "exclamationmark.triangle")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                } else if let emergency = Formatting.emergency(squawk: aircraft.squawk) {
+                    Label(emergency, systemImage: "exclamationmark.triangle.fill")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.red, in: .rect(cornerRadius: 6))
+                }
+                if let rare = rareText {
+                    Label(rare, systemImage: "sparkles")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(.quaternary, in: .capsule)
+                }
             }
-            if let emergency = emergencyText {
-                Label(emergency, systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.red, in: .rect(cornerRadius: 6))
+            heading
+            StatsRow(stats: Formatting.stats(sighting.plane), isStale: isStale)
+            details
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Without a route the flight identity becomes the headline, so the card never leads with a gap.
+    @ViewBuilder private var heading: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let route = sighting.route {
+                Text(Formatting.routeHeadline(route)).font(.system(size: 20, weight: .semibold))
+                    .accessibilityAddTraits(.isHeader)
+                Text(Formatting.routeCodes(route)).font(.system(size: 12)).foregroundStyle(.secondary)
+                Text(identity).font(.system(size: 13, weight: .medium)).padding(.top, 2)
+            } else {
+                Text(identity).font(.system(size: 20, weight: .semibold))
+                    .accessibilityAddTraits(.isHeader)
+                Text("Route unavailable").font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            if let rare = rareText {
-                Label(rare, systemImage: "sparkles")
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(.quaternary, in: .capsule)
-            }
-            Text(title).font(.title3.bold())
-            if let type = aircraft.typeDescription ?? aircraft.typeCode {
-                Text(type).foregroundStyle(.secondary)
-            }
-            Text(routeText)
-            Text(phaseText).foregroundStyle(.secondary)
-            Text("\(sighting.plane.heightAboveHomeFeet.formatted()) ft above you · \(milesText) mi away")
-            if let mph = aircraft.groundSpeedKnots.flatMap(Formatting.mph(knots:)) {
-                Text("\(mph) mph")
-            }
-            if let seats = aircraft.typeCode.flatMap(Lookups.typicalSeats(forTypeCode:)) {
-                Text("~\(seats) seats (typical capacity)").foregroundStyle(.secondary)
-            }
-            if let registration = registrationText {
-                Text(registration).font(.caption).foregroundStyle(.secondary)
+            if let status = Formatting.status(sighting.phase, hasRoute: sighting.route != nil) {
+                Text(status).font(.system(size: 12)).foregroundStyle(.secondary)
             }
         }
     }
 
-    private var title: String {
-        Formatting.flightTitle(
+    @ViewBuilder private var details: some View {
+        let lines = [
+            Formatting.aircraftLine(aircraft),
+            aircraft.yearBuilt.map {
+                Formatting.builtLine(year: $0, currentYear: Calendar.current.component(.year, from: .now))
+            },
+            Formatting.seatsLine(typeCode: aircraft.typeCode),
+        ].compactMap(\.self)
+        if !lines.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(lines, id: \.self) { Text($0) }
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private var identity: String {
+        Formatting.flightIdentity(
             callsign: aircraft.callsign, registration: aircraft.registration, routeAirline: sighting.route?.airlineName
         )
     }
-
-    private var routeText: String {
-        guard let route = sighting.route else { return "route unknown" }
-        return "\(Formatting.place(route.origin)) → \(Formatting.place(route.destination))"
-    }
-
-    private var phaseText: String { Formatting.phase(sighting.phase) }
-
-    private var milesText: String {
-        sighting.plane.distanceMiles.formatted(.number.precision(.fractionLength(1)))
-    }
-
-    private var registrationText: String? {
-        guard let registration = aircraft.registration else { return nil }
-        guard let year = aircraft.yearBuilt else { return registration }
-        let age = Calendar.current.component(.year, from: .now) - year
-        return "\(registration) · built \(year) (\(age) yrs)"
-    }
-
-    private var emergencyText: String? { Formatting.emergency(squawk: aircraft.squawk) }
 
     /// An emergency already has its own red banner, so it doesn't get a second badge.
     private var rareText: String? {
         switch Rarity.of(aircraft) {
         case nil, .emergency: nil
         case let rarity?: "Rare · \(Formatting.rarity(rarity))"
+        }
+    }
+}
+
+/// Equal columns with tabular figures, so the row doesn't shift as the numbers change each poll.
+private struct StatsRow: View {
+    let stats: [Formatting.Stat]
+    let isStale: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            ForEach(stats, id: \.label) { stat in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stat.value)
+                        .font(.system(size: 19, weight: .semibold).monospacedDigit())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .foregroundStyle(isStale ? .secondary : .primary)
+                    Text(stat.label).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(stat.spokenLabel(isStale: isStale))
+            }
         }
     }
 }

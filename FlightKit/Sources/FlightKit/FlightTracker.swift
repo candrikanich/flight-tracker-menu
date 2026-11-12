@@ -5,7 +5,7 @@ import Observation
 @Observable
 public final class FlightTracker {
     public enum Status: Equatable, Sendable {
-        case idle, quiet, offline, needsHome
+        case loading, idle, quiet, offline, needsHome
     }
 
     public struct Sighting: Equatable, Sendable {
@@ -25,7 +25,7 @@ public final class FlightTracker {
 
     public private(set) var current: Sighting?
     public private(set) var lastSeen: Sighting?
-    public private(set) var status: Status = .idle
+    public private(set) var status: Status = .loading
     public private(set) var skyLog = SkyLog()
     @ObservationIgnored public var onNewPlane: (@MainActor (Sighting) -> Void)?
 
