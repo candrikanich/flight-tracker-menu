@@ -53,11 +53,27 @@ private struct LocationSection: View {
             Text("Click the map to place or move your house.").font(.caption).foregroundStyle(.secondary)
             TextField("Ground elevation (ft)", value: $elevationFeet, format: .number.precision(.fractionLength(0)))
             if let message { Text(message).font(.caption).foregroundStyle(.secondary) }
+            if isSaved {
+                Label("Home saved. Overflight uses it every time it starts.", systemImage: "checkmark.circle.fill")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Button("Save location", action: save)
-                .disabled(pin == nil || elevationFeet == nil || lookingUpElevation)
+                .disabled(draft == nil || isSaved || lookingUpElevation)
         }
         .onAppear(perform: loadSaved)
     }
+
+    private var draft: Home? {
+        guard let pin, let elevationFeet else { return nil }
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Home(
+            coordinate: Coordinate(latitude: pin.latitude, longitude: pin.longitude),
+            groundElevationFeet: elevationFeet,
+            address: trimmed.isEmpty ? nil : trimmed
+        )
+    }
+
+    private var isSaved: Bool { draft != nil && draft == settings.home }
 
     private func loadSaved() {
         guard let home = settings.home else {
@@ -67,6 +83,7 @@ private struct LocationSection: View {
         let coordinate = CLLocationCoordinate2D(latitude: home.coordinate.latitude, longitude: home.coordinate.longitude)
         pin = coordinate
         elevationFeet = home.groundElevationFeet
+        address = home.address ?? ""
         camera = .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 3_000, longitudinalMeters: 3_000))
     }
 
@@ -101,12 +118,9 @@ private struct LocationSection: View {
     }
 
     private func save() {
-        guard let pin, let elevationFeet else { return }
-        settings.home = Home(
-            coordinate: Coordinate(latitude: pin.latitude, longitude: pin.longitude),
-            groundElevationFeet: elevationFeet
-        )
-        message = "Saved."
+        guard let draft else { return }
+        settings.home = draft
+        message = nil
     }
 }
 
