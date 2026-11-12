@@ -64,6 +64,21 @@ private func feedJSON(_ planes: [(hex: String, callsign: String, altitude: Int, 
         #expect(tracker.tracks.path(for: "far").count == 2)
     }
 
+    /// Every plane in the feed is a clue to the runway in use, not only the one on the card.
+    @Test func everyCheckFeedsTheRunwayFlow() async {
+        let records = ["a", "b"].map { hex in
+            let position = nearCLE(miles: 3, bearing: 52)
+            return """
+            {"hex":"\(hex)","alt_baro":2000,"baro_rate":-700,"track":232,\
+            "lat":\(position.latitude),"lon":\(position.longitude)}
+            """
+        }
+        http.on("adsb.fi", body: Data(#"{"aircraft":[\#(records.joined(separator: ","))]}"#.utf8))
+        let tracker = makeTracker()
+        await tracker.tick()
+        #expect(tracker.runwayFlow.flow(now: clock.now) == .runway24)
+    }
+
     /// Until the first check answers, the card must not claim the sky is empty.
     @Test func statusIsLoadingUntilTheFirstCheckAnswers() async {
         serveFeed([])
