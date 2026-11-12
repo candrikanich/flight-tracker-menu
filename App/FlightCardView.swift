@@ -9,6 +9,9 @@ struct FlightCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             content
+            TimelineView(.everyMinute) { context in
+                TallyLine(tally: DailyTally(passes: tracker.skyLog.passes, on: context.date, calendar: .current))
+            }
             Divider()
             HStack {
                 Button("Settings…", systemImage: "gearshape", action: openSettings)
@@ -40,6 +43,24 @@ struct FlightCardView: View {
         case .offline: "Can't reach the flight feed right now."
         case .idle: "No planes overhead yet."
         case .needsHome: "Set your home location in Settings, then click Save location."
+        }
+    }
+}
+
+/// Quiet by design: nothing at all until a plane has passed today.
+private struct TallyLine: View {
+    let tally: DailyTally
+
+    var body: some View {
+        if tally.count > 0 {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Formatting.tallyHeadline(count: tally.count))
+                if let details = Formatting.tallyDetails(tally, calendar: .current) {
+                    Text(details)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 }
