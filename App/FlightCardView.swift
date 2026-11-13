@@ -36,7 +36,7 @@ struct FlightCardView: View {
     @ViewBuilder private func runwayLine(now: Date) -> some View {
         if let flow = tracker.runwayFlow.flow(now: now) {
             let overHome = settings.home.flatMap { RunwayFlowWatch.overHome(flow, home: $0.coordinate) }
-            Text(Formatting.runwayLine(flow, overHome: overHome))
+            Text(Formatting.runwayLine(flow, overHome: overHome, since: tracker.runwayFlow.since(now: now), now: now))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
         }
