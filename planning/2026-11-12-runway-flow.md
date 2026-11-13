@@ -40,5 +40,5 @@ pr-review-toolkit:code-reviewer (opus) confirmed the overHome geometry and found
 - **Fixed, Important:** planes voted with no check on where they were, so two arrivals on a downwind leg could call the wrong runway, and a departure turning back could flip its vote for 20 minutes. Votes now need the runway-line gate above. The tests `planesOffToTheSideOfTheRunwayLineDoNotVote` and `aDepartureTurningBackKeepsItsVote` failed first.
 - **Fixed, gaps:** added tests for 3 of 4 agreeing, the 12 NM limit along the line, and pruning of expired votes. They pass on the existing code. Added a comment that the 8-mile circle relies on the feed's 12 NM radius around home.
 - **Fixed, docs:** BKL is about 11 mi from CLE, not 8.
-- **Deferred, minor:** helicopters (category A7) still vote. The runway-line gate removes most of that risk. Leaving them out is a one-line change if a Life Flight ever tips the call.
+- **Fixed after review:** helicopters (category A7) no longer vote. They fly their own approaches, so one on the runway line is not evidence (`helicoptersDoNotVote`).
 - **Deferred, minor:** in calm wind, BKL light aircraft could use 6 while CLE uses its calm-wind runway. That's rare, and filtering by category would fix it.

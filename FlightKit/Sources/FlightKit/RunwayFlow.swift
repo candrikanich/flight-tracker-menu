@@ -81,7 +81,8 @@ public struct RunwayFlowWatch: Sendable, Equatable {
     /// Only planes on the extended runway line, at the end that fits what they're doing: a downwind leg or a
     /// departure turning back flies a runway heading too, but says nothing about which way the runway is used.
     private static func flow(of plane: Aircraft) -> RunwayFlow? {
-        guard let altitude = plane.altitudeFeet, altitude <= maxAltitudeFeet,
+        guard plane.category != "A7",
+              let altitude = plane.altitudeFeet, altitude <= maxAltitudeFeet,
               let rate = plane.verticalRateFpm, abs(rate) >= Phase.climbOrDescentThresholdFpm,
               let track = plane.trackDegrees,
               Geo.distanceMiles(plane.coordinate, airport) <= maxMilesFromAirport,

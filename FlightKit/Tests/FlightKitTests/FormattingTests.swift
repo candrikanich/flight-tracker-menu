@@ -113,13 +113,13 @@ import Testing
         #expect(Formatting.menuBarText(near, route: cleToEwr) == "✈︎ UA1365 → EWR · 0.4 mi · 2,100 ft")
     }
 
-    @Test func lastSeenIsCoarseAndDoesNotCountSeconds() {
+    @Test func agoIsCoarseAndDoesNotCountSeconds() {
         let seen = Date(timeIntervalSince1970: 1_000_000)
-        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(5)) == "Last seen just now")
-        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(59)) == "Last seen just now")
-        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(60)) == "Last seen 1 min ago")
-        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(179)) == "Last seen 2 min ago")
-        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(3_600)) == "Last seen 1 hr ago")
-        #expect(Formatting.lastSeen(seen, now: seen.addingTimeInterval(3 * 3_600 + 1_000)) == "Last seen 3 hr ago")
+        #expect(Formatting.ago(seen, now: seen.addingTimeInterval(5)) == "just now")
+        #expect(Formatting.ago(seen, now: seen.addingTimeInterval(59)) == "just now")
+        #expect(Formatting.ago(seen, now: seen.addingTimeInterval(60)) == "1 min ago")
+        #expect(Formatting.ago(seen, now: seen.addingTimeInterval(179)) == "2 min ago")
+        #expect(Formatting.ago(seen, now: seen.addingTimeInterval(3_600)) == "1 hr ago")
+        #expect(Formatting.ago(seen, now: seen.addingTimeInterval(3 * 3_600 + 1_000)) == "3 hr ago")
     }
 }
