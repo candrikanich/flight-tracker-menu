@@ -33,12 +33,18 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
     public let yearBuilt: Int?
     /// nil when the aircraft reports it is on the ground.
     public let altitudeFeet: Int?
+    /// Against standard pressure, as the transponder reports it. Flight-level targets are set on this scale.
+    public let pressureAltitudeFeet: Int?
     public let groundSpeedKnots: Double?
     public let verticalRateFpm: Int?
+    /// The altitude selected on the autopilot, in feet above sea level. Many planes don't send it.
+    public let targetAltitudeFeet: Int?
     public let squawk: String?
     public let category: String?
     /// From the feed's aircraft database, not guessed from the callsign.
     public let isMilitary: Bool
+    /// The flight has set the "lifeguard" priority status that medical flights use.
+    public let isMedicalFlight: Bool
     /// Direction of travel over the ground, in degrees from true north.
     public let trackDegrees: Double?
     public let coordinate: Coordinate
@@ -54,11 +60,14 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
         operatorName: String? = nil,
         yearBuilt: Int? = nil,
         altitudeFeet: Int?,
+        pressureAltitudeFeet: Int? = nil,
         groundSpeedKnots: Double? = nil,
         verticalRateFpm: Int? = nil,
+        targetAltitudeFeet: Int? = nil,
         squawk: String? = nil,
         category: String? = nil,
         isMilitary: Bool = false,
+        isMedicalFlight: Bool = false,
         trackDegrees: Double? = nil,
         coordinate: Coordinate
     ) {
@@ -70,11 +79,14 @@ public struct Aircraft: Sendable, Equatable, Identifiable {
         self.operatorName = operatorName
         self.yearBuilt = yearBuilt
         self.altitudeFeet = altitudeFeet
+        self.pressureAltitudeFeet = pressureAltitudeFeet
         self.groundSpeedKnots = groundSpeedKnots
         self.verticalRateFpm = verticalRateFpm
+        self.targetAltitudeFeet = targetAltitudeFeet
         self.squawk = squawk
         self.category = category
         self.isMilitary = isMilitary
+        self.isMedicalFlight = isMedicalFlight
         self.trackDegrees = trackDegrees
         self.coordinate = coordinate
     }

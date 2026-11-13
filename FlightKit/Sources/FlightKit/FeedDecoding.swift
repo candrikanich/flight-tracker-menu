@@ -33,6 +33,9 @@ private struct Record: Decodable {
     let track: Double?
     let baroRate: Int?
     let squawk: String?
+    /// Lossy like `dbFlags`: these only add words to the card, so a bad value must not drop the plane.
+    let navAltitudeMcp: Lossy<Double>?
+    let emergency: Lossy<String>?
     let category: String?
     /// Bit 1 is military; the others (interesting, PIA, LADD) aren't used. Lossy because it only adds a
     /// badge, so a malformed value must not drop the whole plane.
@@ -42,6 +45,8 @@ private struct Record: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case hex, flight, r, t, desc, ownOp, year, gs, track, squawk, category, dbFlags, lat, lon
+        case emergency
+        case navAltitudeMcp = "nav_altitude_mcp"
         case altBaro = "alt_baro"
         case altGeom = "alt_geom"
         case baroRate = "baro_rate"
@@ -51,6 +56,13 @@ private struct Record: Decodable {
     /// the day's air pressure and can be off by ~1,000 ft. "ground" from the transponder always wins.
     private var altitudeFeet: Int? {
         altBaro?.feet.map { baro in altGeom?.feet ?? baro }
+    }
+
+    /// The feed packs the selected altitude into 16 ft steps, so 33,000 arrives as 33,024. Some avionics send 0
+    /// when nothing is set, and anything under 1,000 ft is below Cleveland's pattern altitude anyway.
+    private var targetAltitudeFeet: Int? {
+        guard let feet = navAltitudeMcp?.value, (1_000...60_000).contains(feet) else { return nil }
+        return Int((feet / 100).rounded()) * 100
     }
 
     var aircraft: Aircraft? {
@@ -64,11 +76,14 @@ private struct Record: Decodable {
             operatorName: ownOp.nonBlank,
             yearBuilt: year.nonBlank.flatMap(Int.init),
             altitudeFeet: altitudeFeet,
+            pressureAltitudeFeet: altBaro?.feet,
             groundSpeedKnots: gs.flatMap { (0...2_000).contains($0) ? $0 : nil },
             verticalRateFpm: baroRate,
+            targetAltitudeFeet: targetAltitudeFeet,
             squawk: squawk.nonBlank,
             category: category.nonBlank,
             isMilitary: (dbFlags?.value ?? 0) & 1 != 0,
+            isMedicalFlight: emergency?.value == "lifeguard",
             trackDegrees: track.flatMap { (0..<360).contains($0) ? $0 : nil },
             coordinate: Coordinate(latitude: lat, longitude: lon)
         )

@@ -158,8 +158,13 @@ private struct SightingDetails: View {
                     .accessibilityAddTraits(.isHeader)
                 Text("Route unavailable").font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            if let status = Formatting.status(sighting.phase, hasRoute: sighting.route != nil) {
+            let live = isStale ? nil : aircraft
+            let hasRoute = sighting.route != nil
+            if let status = Formatting.status(sighting.phase, hasRoute: hasRoute, aircraft: live) {
                 Text(status).font(.system(size: 12)).foregroundStyle(.secondary)
+                    .accessibilityLabel(
+                        Formatting.spokenStatus(sighting.phase, hasRoute: hasRoute, aircraft: live) ?? status
+                    )
             }
         }
     }
@@ -167,6 +172,7 @@ private struct SightingDetails: View {
     @ViewBuilder private var details: some View {
         let lines = [
             Formatting.aircraftLine(aircraft),
+            Formatting.ownerLine(aircraft, routeAirline: sighting.route?.airlineName),
             aircraft.yearBuilt.map {
                 Formatting.builtLine(year: $0, currentYear: Calendar.current.component(.year, from: .now))
             },
