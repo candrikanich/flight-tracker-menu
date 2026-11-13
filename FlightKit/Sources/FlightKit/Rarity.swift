@@ -3,6 +3,7 @@ import Foundation
 /// Why a plane is worth a heads-up. Only the most pressing reason is kept, so the badge stays one short label.
 public enum Rarity: Sendable, Equatable {
     case emergency(String)
+    case medicalFlight
     case notableType(String)
     case military
     case helicopter
@@ -24,6 +25,7 @@ public enum Rarity: Sendable, Equatable {
 
     public static func of(_ aircraft: Aircraft) -> Rarity? {
         if let squawk = aircraft.squawk, Formatting.emergency(squawk: squawk) != nil { return .emergency(squawk) }
+        if aircraft.isMedicalFlight { return .medicalFlight }
         if let name = aircraft.typeCode.flatMap({ notableTypes[$0] }) { return .notableType(name) }
         if aircraft.isMilitary { return .military }
         if aircraft.category == "A7" { return .helicopter }

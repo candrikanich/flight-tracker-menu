@@ -119,6 +119,91 @@ extension Formatting {
         phase == .passingOver && !hasRoute ? nil : self.phase(phase)
     }
 
+    /// "Arriving CLE · descending to 6,000 ft", or "Climbing to 33,000 ft" without a route. A stale card passes
+    /// no aircraft, because "descending to" from minutes ago would read as live.
+    public static func status(_ phase: FlightPhase, hasRoute: Bool, aircraft: Aircraft?) -> String? {
+        statusLine(phase, hasRoute: hasRoute, aircraft: aircraft, separator: " · ", unit: "ft")
+    }
+
+    public static func spokenStatus(_ phase: FlightPhase, hasRoute: Bool, aircraft: Aircraft?) -> String? {
+        statusLine(phase, hasRoute: hasRoute, aircraft: aircraft, separator: ", ", unit: "feet")
+    }
+
+    /// Without a route the phase is only "Climbing" or "Descending" (or nothing), so the target replaces it.
+    private static func statusLine(
+        _ phase: FlightPhase, hasRoute: Bool, aircraft: Aircraft?, separator: String, unit: String
+    ) -> String? {
+        let base = status(phase, hasRoute: hasRoute)
+        guard let target = aircraft.flatMap(altitudeTarget) else { return base }
+        let feet = target.feet.formatted(.number.grouping(.automatic).locale(usEnglish))
+        let motion = "\(target.isClimbing ? "climbing" : "descending") to \(feet) \(unit)"
+        guard hasRoute, let base else { return motion.prefix(1).uppercased() + motion.dropFirst() }
+        return "\(base)\(separator)\(motion)"
+    }
+
+    /// Within this the plane is already leveling off.
+    static let altitudeTargetMinimumGapFeet = 1_000
+
+    /// From here up, US altitudes are flight levels, set against standard pressure rather than local pressure.
+    static let transitionAltitudeFeet = 18_000
+
+    /// Pilots preset the next altitude while still level, so the target counts only while the plane is
+    /// actually climbing or descending toward it. A flight level is compared with pressure altitude, which can
+    /// sit 1,500 ft from GPS height at cruise; below that the target is set to local pressure, close to GPS.
+    static func altitudeTarget(_ aircraft: Aircraft) -> (feet: Int, isClimbing: Bool)? {
+        guard let target = aircraft.targetAltitudeFeet, let rate = aircraft.verticalRateFpm,
+              abs(rate) >= Phase.climbOrDescentThresholdFpm else { return nil }
+        let reference = target >= transitionAltitudeFeet
+            ? aircraft.pressureAltitudeFeet ?? aircraft.altitudeFeet
+            : aircraft.altitudeFeet
+        guard let altitude = reference else { return nil }
+        let gap = target - altitude
+        guard abs(gap) >= altitudeTargetMinimumGapFeet, (gap > 0) == (rate > 0) else { return nil }
+        return (target, rate > 0)
+    }
+
+    /// "Registered to Battelle Memorial Institute". Airline flights already lead with the airline. Only
+    /// organizations are named: private owners are listed as "LAST FIRST MIDDLE", and a person's name doesn't
+    /// belong on the card. A bank holding title as trustee isn't who flies the plane, so it is left out too.
+    public static func ownerLine(_ aircraft: Aircraft, routeAirline: String?) -> String? {
+        guard let owner = aircraft.operatorName, routeAirline == nil,
+              aircraft.callsign.flatMap(Lookups.airline(forCallsign:)) == nil else { return nil }
+        let words = Set(owner.uppercased().split { !$0.isLetter }.map(String.init))
+        guard !words.contains("TRUSTEE"), !words.isDisjoint(with: organizationWords) else { return nil }
+        return "Registered to \(registryName(owner))"
+    }
+
+    /// Words that mark an owner as an organization. Missing one only hides the line, the safe way to be wrong.
+    private static let organizationWords: Set<String> = [
+        "LLC", "INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LP", "LLP", "PLLC", "PC",
+        "INSTITUTE", "UNIVERSITY", "COLLEGE", "ACADEMY", "SCHOOL", "FOUNDATION", "SYSTEM", "HEALTH", "HOSPITAL",
+        "CITY", "STATE", "COUNTY", "DEPT", "DEPARTMENT", "ADMINISTRATION", "POLICE", "PATROL", "AIRPORT",
+        "AVIATION", "AIRLINES", "AIRWAYS", "AIR", "AERO", "SERVICES", "GROUP", "CLUB", "ASSOCIATION",
+        "HOLDINGS", "PARTNERS", "ENTERPRISES", "LEASING", "CHARTER", "FLIGHT", "JETS",
+    ]
+
+    /// The FAA registry is all capitals; a name that already has its own casing is kept. Short words are usually
+    /// initials (FSI, GLC, LLC), so they stay.
+    static func registryName(_ raw: String) -> String {
+        guard raw == raw.uppercased() else { return raw }
+        return raw.split(separator: " ").enumerated().map { index, word in
+            let upper = word.uppercased()
+            if index > 0, joiningWords.contains(upper) { return upper.lowercased() }
+            if shortWords.contains(upper) || joiningWords.contains(upper) { return upper.capitalized(with: usEnglish) }
+            if keptUpper.contains(upper) || upper.count <= 3 || upper.contains(where: \.isNumber)
+                || !upper.contains(where: "AEIOUY".contains) {
+                return upper
+            }
+            return upper.capitalized(with: usEnglish)
+        }.joined(separator: " ")
+    }
+
+    private static let joiningWords: Set<String> = ["OF", "AND", "THE", "FOR", "AT", "BY", "ON", "IN"]
+    private static let shortWords: Set<String> = [
+        "INC", "CO", "AIR", "JET", "SKY", "ONE", "TWO", "SUN", "BAY", "OAK", "NEW", "BIG", "TOP", "RED", "ACE", "LTD",
+    ]
+    private static let keptUpper: Set<String> = ["NASA"]
+
     /// The card when there's no plane to show. "No planes" and "can't tell" must never look alike.
     public static func emptyState(_ status: FlightTracker.Status) -> (title: String, detail: String?) {
         switch status {

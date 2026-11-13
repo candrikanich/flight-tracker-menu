@@ -67,6 +67,7 @@ public enum Formatting {
         switch rarity {
         case .emergency(let squawk): emergency(squawk: squawk) ?? "Emergency squawk \(squawk)"
         case .notableType(let name), .specialOperator(let name): name
+        case .medicalFlight: "Medical flight"
         case .military: "Military"
         case .helicopter: "Helicopter"
         case .vintage(let year): "Vintage, built \(year)"

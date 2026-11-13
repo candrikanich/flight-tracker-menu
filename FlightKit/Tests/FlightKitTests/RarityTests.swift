@@ -9,11 +9,13 @@ private func aircraft(
     yearBuilt: Int? = 2015,
     squawk: String? = "1234",
     category: String? = "A3",
-    isMilitary: Bool = false
+    isMilitary: Bool = false,
+    isMedicalFlight: Bool = false
 ) -> Aircraft {
     Aircraft(
         hex: "abc123", callsign: callsign, typeCode: typeCode, operatorName: operatorName, yearBuilt: yearBuilt,
         altitudeFeet: 2_100, squawk: squawk, category: category, isMilitary: isMilitary,
+        isMedicalFlight: isMedicalFlight,
         coordinate: Coordinate(latitude: 41.45, longitude: -81.80)
     )
 }
@@ -52,6 +54,16 @@ private func aircraft(
     @Test func emergencySquawkIsRare() {
         #expect(Rarity.of(aircraft(squawk: "7700")) == .emergency("7700"))
         #expect(Rarity.of(aircraft(squawk: "7600")) == .emergency("7600"))
+    }
+
+    /// A medical helicopter is more interesting as a medical flight than as a helicopter.
+    @Test func medicalFlightsAreRareAndOutrankTheAircraft() {
+        let medicalHelicopter = aircraft(typeCode: "AS65", category: "A7", isMedicalFlight: true)
+        let medicalInEmergency = aircraft(squawk: "7700", isMedicalFlight: true)
+
+        #expect(Rarity.of(medicalHelicopter) == .medicalFlight)
+        #expect(Rarity.of(medicalInEmergency) == .emergency("7700"))
+        #expect(Formatting.rarity(.medicalFlight) == "Medical flight")
     }
 
     @Test func mostPressingReasonWins() {

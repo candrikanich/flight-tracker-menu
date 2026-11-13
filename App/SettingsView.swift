@@ -202,7 +202,7 @@ private struct NotificationsSection: View {
             }
             .disabled(cardIsTheAlert)
             if settings.notificationScope == .rarePlanes {
-                Text("Military, helicopters, 747s and A380s, NASA, vintage aircraft and emergencies.")
+                Text("Military, helicopters, medical flights, 747s and A380s, NASA, vintage aircraft and emergencies.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if cardIsTheAlert {
