@@ -15,6 +15,7 @@ struct SettingsView: View {
             NotificationsSection(settings: settings, notifier: notifier)
             QuietHoursSection(settings: settings)
             LaunchAtLoginSection()
+            DataSourcesSection()
         }
         .formStyle(.grouped)
         .frame(width: 460, height: 720)
@@ -265,6 +266,19 @@ private struct LaunchAtLoginSection: View {
             if let error { Text(error).font(.caption).foregroundStyle(.secondary) }
         }
         .onAppear { enabled = SMAppService.mainApp.status == .enabled }
+    }
+}
+
+/// adsb.fi's open-data terms require citing it with a link to its home page; the others are courtesy.
+private struct DataSourcesSection: View {
+    var body: some View {
+        Section("Data sources") {
+            Link("Live aircraft positions from adsb.fi", destination: URL(string: "https://adsb.fi")!)
+            Text("Routes from adsbdb.com and Virtual Radar Server standing data via adsb.lol.")
+                .font(.caption).foregroundStyle(.secondary)
+            Text("Ground elevation: U.S. Geological Survey. Maps: Apple.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
 
