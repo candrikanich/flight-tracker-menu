@@ -85,7 +85,7 @@ private struct PassRow: View {
     }
 
     private var subtitle: String {
-        let type = pass.typeDescription ?? pass.typeCode
+        let type = pass.typeDescription.map(Formatting.typeName) ?? pass.typeCode
         let route = pass.route.map { route in
             "\(route.origin.iata ?? route.origin.icao) → \(route.destination.iata ?? route.destination.icao)"
         }

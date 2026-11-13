@@ -36,9 +36,15 @@ struct FlightCardView: View {
     @ViewBuilder private func runwayLine(now: Date) -> some View {
         if let flow = tracker.runwayFlow.flow(now: now) {
             let overHome = settings.home.flatMap { RunwayFlowWatch.overHome(flow, home: $0.coordinate) }
-            Text(Formatting.runwayLine(flow, overHome: overHome, since: tracker.runwayFlow.since(now: now), now: now))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+            let since = tracker.runwayFlow.since(now: now)
+            // Labeled and set apart, so it isn't read as a fact about the plane above.
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Local traffic").font(.system(size: 11, weight: .medium))
+                Text(Formatting.runwayLine(flow, overHome: overHome, since: since, now: now))
+                    .font(.system(size: 12))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.top, 6)
         }
     }
 
@@ -91,7 +97,7 @@ private struct TallyLine: View {
 
 private struct SightingDetails: View {
     let sighting: FlightTracker.Sighting
-    /// "Nearby now" or "Last known position · 2 min ago": words, not a colored dot, so fresh and stale
+    /// "Nearby now" or "Last seen 2 min ago": words, not a colored dot, so fresh and stale
     /// can't be confused.
     let freshness: String
     /// A stale card keeps its facts but drops anything that looks live: no red banner, "last known" labels.
@@ -209,7 +215,7 @@ private struct StatsRow: View {
     let isStale: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 14) {
             ForEach(stats, id: \.label) { stat in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(stat.value)
@@ -217,7 +223,7 @@ private struct StatsRow: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Text(stat.label)
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)

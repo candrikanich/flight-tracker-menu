@@ -17,7 +17,7 @@ extension MapFraming {
     public static func routeRegion(route: Route, plane: Coordinate) -> Region? {
         let arc = Geo.greatCircle(from: route.origin.coordinate, to: route.destination.coordinate)
         let crossesDateLine = zip(arc, arc.dropFirst()).contains { abs($0.longitude - $1.longitude) > 180 }
-        return crossesDateLine ? nil : region(fitting: arc + [plane])
+        return crossesDateLine ? nil : region(fitting: arc + [plane], padding: routePadding)
     }
 }
 
