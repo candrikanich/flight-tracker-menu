@@ -132,6 +132,15 @@ func nearCLE(miles: Double, bearing: Double) -> Coordinate {
         #expect(flow(after: [landing24("a"), landing24("b"), landing24("d"), other]) == .runway24)
     }
 
+    /// Helicopters fly their own approaches, so one that happens to be on the runway line isn't evidence.
+    @Test func helicoptersDoNotVote() {
+        let helicopter = Aircraft(
+            hex: "h", altitudeFeet: 2_000, verticalRateFpm: -700, category: "A7",
+            trackDegrees: 232, coordinate: nearCLE(miles: 3, bearing: 52)
+        )
+        #expect(flow(after: [landing24("a"), helicopter]) == nil)
+    }
+
     @Test func expiredVotesAreDropped() {
         var watch = RunwayFlowWatch()
         watch.record([landing24("a")], at: start)
