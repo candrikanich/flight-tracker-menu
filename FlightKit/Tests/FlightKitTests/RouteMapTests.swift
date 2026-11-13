@@ -93,4 +93,13 @@ import Testing
         #expect(contains(region, plane))
         #expect(contains(region, lax.coordinate))
     }
+
+    /// The plane marker is the point of the tile, so it never sits against the edge.
+    @Test func fullRouteLeavesRoomAroundThePlane() throws {
+        let plane = Coordinate(latitude: 45.0, longitude: -100.0)
+        let route = Route(airlineName: nil, origin: cle, destination: lax)
+        let region = try #require(MapFraming.routeRegion(route: route, plane: plane))
+        let northEdge = region.center.latitude + region.latitudeDelta / 2
+        #expect((northEdge - plane.latitude) / region.latitudeDelta >= 0.18)
+    }
 }

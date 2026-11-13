@@ -21,7 +21,17 @@ struct FlightMapView: View {
         return (route, region)
     }
 
+    /// At this scale the tile no longer shows the plane overhead, so it says what it does show.
     var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if fullRoute != nil {
+                Text("Flight route").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+            }
+            map
+        }
+    }
+
+    private var map: some View {
         Map(position: .constant(.region(region)), interactionModes: []) {
             if let fullRoute = fullRoute?.route {
                 MapPolyline(coordinates: Geo.greatCircle(

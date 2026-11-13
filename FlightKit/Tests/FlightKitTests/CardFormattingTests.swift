@@ -66,10 +66,29 @@ import Testing
                 altitudeFeet: 1_000, coordinate: Coordinate(latitude: 0, longitude: 0)
             ))
         }
-        #expect(line(type: "BOEING 737-700", code: "B737", registration: "N280WN") == "BOEING 737-700 · N280WN")
+        #expect(line(type: "BOEING 737-700", code: "B737", registration: "N280WN") == "Boeing 737-700 · N280WN")
         #expect(line(type: nil, code: "B737", registration: nil) == "B737")
         #expect(line(type: nil, code: nil, registration: "N280WN") == "N280WN")
         #expect(line(type: nil, code: nil, registration: nil) == nil)
+    }
+
+    /// The feed capitalizes only the maker ("BOEING 737 MAX 8"); the model keeps its own casing.
+    @Test func typeNameSoftensOnlyTheShoutedMaker() {
+        #expect(Formatting.typeName("BOEING 737 MAX 8") == "Boeing 737 MAX 8")
+        #expect(Formatting.typeName("AIRBUS A-320neo") == "Airbus A-320neo")
+        #expect(Formatting.typeName("BOMBARDIER Regional Jet CRJ-900") == "Bombardier Regional Jet CRJ-900")
+        #expect(Formatting.typeName("HAWKER BEECHCRAFT Hawker 750/850") == "Hawker Beechcraft Hawker 750/850")
+        #expect(Formatting.typeName("DE HAVILLAND DHC-6 Twin Otter") == "de Havilland DHC-6 Twin Otter")
+        #expect(Formatting.typeName("HONDA HondaJet") == "Honda HondaJet")
+        #expect(Formatting.typeName("Bombardier Challenger 350") == "Bombardier Challenger 350")
+        #expect(Formatting.typeName("") == "")
+    }
+
+    /// Initialism makers stay capitalized, and "Mc" names keep their inner capital.
+    @Test func typeNameKeepsInitialismsAndMcNames() {
+        #expect(Formatting.typeName("ATR ATR-72-600") == "ATR ATR-72-600")
+        #expect(Formatting.typeName("BAE SYSTEMS Avro RJ-85") == "BAE Systems Avro RJ-85")
+        #expect(Formatting.typeName("MCDONNELL DOUGLAS MD-80") == "McDonnell Douglas MD-80")
     }
 
     /// Without a callsign the registration is already the flight identity; saying it twice crowds the line.
@@ -117,7 +136,7 @@ import Testing
         let later = seen.addingTimeInterval(180)
         #expect(Formatting.freshness(seenAt: seen, isCurrent: true, status: .idle, now: later) == "Nearby now")
         #expect(Formatting.freshness(seenAt: seen, isCurrent: false, status: .idle, now: later)
-            == "Last known position · 3 min ago")
+            == "Last seen 3 min ago")
     }
 
     /// A stale card must say why nothing is live, whatever the reason.
@@ -126,9 +145,9 @@ import Testing
         func stale(_ status: FlightTracker.Status) -> String {
             Formatting.freshness(seenAt: seen, isCurrent: false, status: status, now: seen)
         }
-        #expect(stale(.offline) == "Last known position · just now · Flight data unavailable")
-        #expect(stale(.quiet) == "Last known position · just now · Quiet hours")
-        #expect(stale(.needsHome) == "Last known position · just now · Set your home location")
+        #expect(stale(.offline) == "Last seen just now · Flight data unavailable")
+        #expect(stale(.quiet) == "Last seen just now · Quiet hours")
+        #expect(stale(.needsHome) == "Last seen just now · Set your home location")
     }
 
     @Test func staleStatsSayTheyAreFromTheLastSighting() {

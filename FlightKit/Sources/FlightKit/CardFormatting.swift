@@ -18,7 +18,7 @@ extension Formatting {
     /// last known position, said up front, with why nothing is live when it isn't just an empty sky.
     public static func freshness(seenAt: Date, isCurrent: Bool, status: FlightTracker.Status, now: Date) -> String {
         if isCurrent { return "Nearby now" }
-        let seen = "Last known position · \(ago(seenAt, now: now))"
+        let seen = "Last seen \(ago(seenAt, now: now))"
         return status == .idle ? seen : "\(seen) · \(emptyState(status).title)"
     }
 
@@ -90,13 +90,34 @@ extension Formatting {
         ]
     }
 
+    /// The feed capitalizes only the maker ("BOEING 737 MAX 8"). The model after it keeps its own casing, so
+    /// designations such as "MAX" and "CRJ-900" stay as they are.
+    public static func typeName(_ raw: String) -> String {
+        var inMaker = true
+        return raw.split(separator: " ", omittingEmptySubsequences: false).map { word in
+            guard inMaker, !word.isEmpty, word.allSatisfy({ $0.isLetter && $0.isUppercase }) else {
+                inMaker = false
+                return String(word)
+            }
+            return makerWord(String(word))
+        }.joined(separator: " ")
+    }
+
+    /// Short maker words are initialisms (ATR, BAE, IAI), so they keep their capitals.
+    private static func makerWord(_ word: String) -> String {
+        if word == "DE" { return "de" }
+        if word.count <= 3 { return word }
+        if word.hasPrefix("MC") { return "Mc" + word.dropFirst(2).capitalized(with: usEnglish) }
+        return word.capitalized(with: usEnglish)
+    }
+
     /// When the flight identity is already the registration (no callsign, or a light aircraft broadcasting
     /// its tail number), it isn't said twice.
     public static func aircraftLine(_ aircraft: Aircraft) -> String? {
         let registration = aircraft.registration.flatMap {
             flightLabel(callsign: aircraft.callsign, registration: $0) == $0 ? nil : $0
         }
-        let parts = [aircraft.typeDescription ?? aircraft.typeCode, registration].compactMap(\.self)
+        let parts = [aircraft.typeDescription.map(typeName) ?? aircraft.typeCode, registration].compactMap(\.self)
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 

@@ -60,12 +60,14 @@ public enum MapFraming {
     public static let minimumSpanMiles = 3.0
     /// Room around the outermost points so the plane symbol isn't cut off at the edge.
     static let padding = 1.3
+    /// The whole-trip tile is mostly empty map, so the plane gets more room from the edge there.
+    static let routePadding = 1.6
 
     public static func region(home: Coordinate, plane: Coordinate, path: [Coordinate]) -> Region {
         region(fitting: [home, plane] + path)
     }
 
-    static func region(fitting points: [Coordinate]) -> Region {
+    static func region(fitting points: [Coordinate], padding: Double = padding) -> Region {
         let latitudes = points.map(\.latitude)
         let longitudes = points.map(\.longitude)
         let (south, north) = (latitudes.min()!, latitudes.max()!)
