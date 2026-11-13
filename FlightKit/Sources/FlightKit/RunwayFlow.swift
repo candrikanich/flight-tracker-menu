@@ -21,6 +21,8 @@ public struct RunwayFlowWatch: Sendable, Equatable {
     static let maxMilesFromAirport = 8.0
     /// The flow changes with the wind; older traffic says nothing about now.
     public static let window: TimeInterval = 20 * 60
+    /// Longer than this without a call and the flow may have changed unseen, so the switch time is dropped.
+    public static let continuityGap: TimeInterval = 2 * 3_600
     static let minimumAircraft = 2
     static let agreement = 0.75
     /// Farther than this to the side of the extended runway line, nothing lines up over home.
@@ -42,18 +44,47 @@ public struct RunwayFlowWatch: Sendable, Equatable {
     private struct Vote: Sendable, Equatable {
         let flow: RunwayFlow
         let time: Date
+        /// When this plane was first seen going this way; an arrival is seen on many checks.
+        let firstTime: Date
     }
 
     /// One vote per aircraft, its latest, so a plane seen on many checks counts once.
     private var votes: [String: Vote] = [:]
+    private var called: RunwayFlow?
+    private var calledAt: Date?
+    private var lastCalled: Date?
+    /// Set only when this watch saw the call go from one settled runway to the other.
+    private var switchedAt: Date?
 
     public init() {}
 
     mutating func record(_ aircraft: [Aircraft], at time: Date) {
         for plane in aircraft {
-            if let flow = Self.flow(of: plane) { votes[plane.hex] = Vote(flow: flow, time: time) }
+            guard let flow = Self.flow(of: plane) else { continue }
+            let previous = votes[plane.hex]
+            let firstTime = previous?.flow == flow ? previous?.firstTime ?? time : time
+            votes[plane.hex] = Vote(flow: flow, time: time, firstTime: firstTime)
         }
         votes = votes.filter { time.timeIntervalSince($0.value.time) <= Self.window }
+        if let lastCalled, time.timeIntervalSince(lastCalled) > Self.continuityGap {
+            called = nil
+            calledAt = nil
+            switchedAt = nil
+        }
+        guard let flow = flow(now: time) else { return }
+        if called != flow {
+            switchedAt = hadSettled(by: time) ? votes.values.filter { $0.flow == flow }.map(\.firstTime).min() : nil
+            called = flow
+            calledAt = time
+        }
+        lastCalled = time
+    }
+
+    /// A call that held less than a window is more likely a few odd planes in a quiet spell than a runway
+    /// change, so leaving it says nothing about when the next call began.
+    private func hadSettled(by time: Date) -> Bool {
+        guard called != nil, let calledAt else { return false }
+        return time.timeIntervalSince(calledAt) >= Self.window
     }
 
     /// nil until enough recent traffic agrees: an honest "don't know" beats a guess.
@@ -64,6 +95,12 @@ public struct RunwayFlowWatch: Sendable, Equatable {
         let leader: RunwayFlow = toward6 * 2 >= recent.count ? .runway6 : .runway24
         let leaderCount = leader == .runway6 ? toward6 : recent.count - toward6
         return Double(leaderCount) / Double(recent.count) >= Self.agreement ? leader : nil
+    }
+
+    /// When the call last switched runways, if this watch saw it happen.
+    public func since(now: Date) -> Date? {
+        guard let flow = flow(now: now), flow == called else { return nil }
+        return switchedAt
     }
 
     /// Landing on 6 means arriving from the southwest and departing to the northeast. A home on the
@@ -112,8 +149,15 @@ public struct RunwayFlowWatch: Sendable, Equatable {
 
 extension Formatting {
     /// Runway numbers without L/R/C: the planes say which direction, not which of the parallels.
-    public static func runwayLine(_ flow: RunwayFlow, overHome: OverHome?) -> String {
-        let runway = "CLE landing on runway \(flow == .runway6 ? "6" : "24")"
+    public static func runwayLine(
+        _ flow: RunwayFlow, overHome: OverHome?, since: Date? = nil, now: Date = .now, calendar: Calendar = .current
+    ) -> String {
+        var runway = "CLE landing on runway \(flow == .runway6 ? "6" : "24")"
+        if let since, calendar.isDate(since, inSameDayAs: now) {
+            var style = Date.FormatStyle(date: .omitted, time: .shortened).locale(usEnglish)
+            style.timeZone = calendar.timeZone
+            runway += " since \(since.formatted(style))"
+        }
         switch overHome {
         case .arrivals: return "\(runway) · arrivals over you"
         case .departures: return "\(runway) · departures over you"

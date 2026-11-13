@@ -143,14 +143,135 @@ func nearCLE(miles: Double, bearing: Double) -> Coordinate {
 
     @Test func expiredVotesAreDropped() {
         var watch = RunwayFlowWatch()
-        watch.record([landing24("a")], at: start)
-        watch.record([], at: start.addingTimeInterval(RunwayFlowWatch.window + 1))
-        #expect(watch == RunwayFlowWatch())
+        watch.record([landing24("a"), landing24("b")], at: start)
+        let later = start.addingTimeInterval(RunwayFlowWatch.window + 1)
+        watch.record([], at: later)
+        #expect(watch.flow(now: later) == nil)
     }
 
     @Test func homeFarOutAlongTheRunwayLineGetsNeither() {
         #expect(RunwayFlowWatch.overHome(.runway6, home: nearCLE(miles: 13, bearing: 232)) == .arrivals)
         #expect(RunwayFlowWatch.overHome(.runway6, home: nearCLE(miles: 15, bearing: 232)) == nil)
+    }
+
+    // MARK: Since when
+
+    func landing6(_ hex: String) -> Aircraft {
+        plane(hex, at: nearCLE(miles: 3, bearing: 232), track: 52, rate: -700)
+    }
+
+    /// Calls 24 at `start`, then 6 once the 24 votes have aged out.
+    func switchedTo6() -> (watch: RunwayFlowWatch, switchedAt: Date) {
+        var watch = RunwayFlowWatch()
+        watch.record([landing24("a"), landing24("b")], at: start)
+        let later = start.addingTimeInterval(RunwayFlowWatch.window + 60)
+        watch.record([landing6("c"), landing6("d")], at: later)
+        return (watch, later)
+    }
+
+    /// The app starting up didn't see the flow begin, so it can't say since when.
+    @Test func theFirstCallHasNoSince() {
+        var watch = RunwayFlowWatch()
+        watch.record([landing24("a"), landing24("b")], at: start)
+        #expect(watch.flow(now: start) == .runway24)
+        #expect(watch.since(now: start) == nil)
+    }
+
+    @Test func aSwitchSeenHappeningIsRemembered() {
+        let (watch, switchedAt) = switchedTo6()
+        #expect(watch.flow(now: switchedAt) == .runway6)
+        #expect(watch.since(now: switchedAt) == switchedAt)
+    }
+
+    @Test func moreTrafficTheSameWayKeepsTheSwitchTime() {
+        var (watch, switchedAt) = switchedTo6()
+        let later = switchedAt.addingTimeInterval(15 * 60)
+        watch.record([landing6("e"), landing6("f")], at: later)
+        #expect(watch.since(now: later) == switchedAt)
+    }
+
+    @Test func sinceIsHiddenWhileTheCallIsUnsure() {
+        var (watch, switchedAt) = switchedTo6()
+        let quiet = switchedAt.addingTimeInterval(RunwayFlowWatch.window + 60)
+        watch.record([], at: quiet)
+        #expect(watch.since(now: quiet) == nil)
+    }
+
+    /// A lull between arrivals doesn't hide a change: the call comes back the same way.
+    @Test func aShortLullKeepsTheSwitchTime() {
+        var (watch, switchedAt) = switchedTo6()
+        let quiet = switchedAt.addingTimeInterval(RunwayFlowWatch.window + 60)
+        watch.record([], at: quiet)
+        let back = quiet.addingTimeInterval(10 * 60)
+        watch.record([landing6("e"), landing6("f")], at: back)
+        #expect(watch.since(now: back) == switchedAt)
+    }
+
+    /// Overnight or with the Mac asleep, the flow could have flipped and flipped back unseen.
+    @Test func aLongGapForgetsTheSwitch() {
+        var (watch, switchedAt) = switchedTo6()
+        let morning = switchedAt.addingTimeInterval(RunwayFlowWatch.continuityGap + 60)
+        watch.record([landing6("e"), landing6("f")], at: morning)
+        #expect(watch.flow(now: morning) == .runway6)
+        #expect(watch.since(now: morning) == nil)
+    }
+
+    /// The call flips only once the old runway's votes age out, so the switch is dated by the first plane
+    /// seen using the new one, not by the flip.
+    @Test func theSwitchIsDatedByTheFirstPlaneOnTheNewRunway() {
+        var watch = RunwayFlowWatch()
+        watch.record([landing24("a"), landing24("b")], at: start)
+        let firstOn6 = start.addingTimeInterval(RunwayFlowWatch.window - 120)
+        watch.record([landing6("c")], at: firstOn6)
+        let flip = start.addingTimeInterval(RunwayFlowWatch.window + 60)
+        watch.record([landing6("d")], at: flip)
+        #expect(watch.flow(now: flip) == .runway6)
+        #expect(watch.since(now: flip) == firstOn6)
+    }
+
+    /// An arrival shows up on many checks on its way in; its first one dates the switch.
+    @Test func aPlaneSeenOnManyChecksDatesFromItsFirstSighting() {
+        var watch = RunwayFlowWatch()
+        watch.record([landing24("a"), landing24("b")], at: start)
+        let firstOn6 = start.addingTimeInterval(RunwayFlowWatch.window - 120)
+        watch.record([landing6("c")], at: firstOn6)
+        let flip = start.addingTimeInterval(RunwayFlowWatch.window + 60)
+        watch.record([landing6("c"), landing6("d")], at: flip)
+        #expect(watch.since(now: flip) == firstOn6)
+    }
+
+    /// A few planes going the other way in a quiet spell aren't a runway change, so flipping straight back
+    /// mustn't claim the old runway started just now.
+    @Test func aBriefFlipAndBackLeavesNoSince() {
+        var (watch, switchedAt) = switchedTo6()
+        let back = switchedAt.addingTimeInterval(5 * 60)
+        watch.record(["e", "f", "g", "h", "i", "j"].map(landing24), at: back)
+        #expect(watch.flow(now: back) == .runway24)
+        #expect(watch.since(now: back) == nil)
+    }
+
+    /// Between checks the votes can age into a different call than the last one recorded.
+    @Test func sinceIsHiddenWhenTheCallMovedOnBetweenChecks() {
+        var (watch, switchedAt) = switchedTo6()
+        let mixed = switchedAt.addingTimeInterval(10 * 60)
+        watch.record([landing24("e"), landing24("f")], at: mixed)
+        let later = switchedAt.addingTimeInterval(RunwayFlowWatch.window + 30)
+        #expect(watch.flow(now: later) == .runway24)
+        #expect(watch.since(now: later) == nil)
+    }
+
+    @Test func runwayLineSaysSinceWhenToday() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let since = calendar.date(from: DateComponents(year: 2026, month: 11, day: 13, hour: 14, minute: 40))!
+        let now = since.addingTimeInterval(90 * 60)
+        #expect(Formatting.runwayLine(.runway24, overHome: .arrivals, since: since, now: now, calendar: calendar)
+            == "CLE landing on runway 24 since 2:40\u{202F}PM · arrivals over you")
+        #expect(Formatting.runwayLine(.runway6, overHome: nil, since: since, now: now, calendar: calendar)
+            == "CLE landing on runway 6 since 2:40\u{202F}PM")
+        let tomorrow = since.addingTimeInterval(12 * 3_600)
+        #expect(Formatting.runwayLine(.runway6, overHome: nil, since: since, now: tomorrow, calendar: calendar)
+            == "CLE landing on runway 6")
     }
 
     @Test func runwayLineSaysTheRunwayAndWhatPassesOver() {

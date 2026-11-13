@@ -17,7 +17,7 @@ When a plane comes into view, the menu bar shows something like `UA1365 → EWR 
 ## Develop
 
 ```sh
-swift test --package-path FlightKit                        # 202 unit tests
+swift test --package-path FlightKit                        # 213 unit tests
 FLIGHT_TEAM_ID=<team id> xcodegen --spec Xcode/project.yml
 open Xcode/Overflight.xcodeproj                         # run the Overflight scheme
 ```
