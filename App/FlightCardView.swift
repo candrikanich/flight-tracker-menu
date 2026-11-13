@@ -148,7 +148,10 @@ private struct SightingDetails: View {
             if let route = sighting.route {
                 Text(Formatting.routeHeadline(route)).font(.system(size: 20, weight: .semibold))
                     .accessibilityAddTraits(.isHeader)
-                Text(Formatting.routeCodes(route)).font(.system(size: 12)).foregroundStyle(.secondary)
+                let position = isStale ? nil : sighting.plane.aircraft.coordinate
+                Text(Formatting.routeCodes(route, position: position))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .accessibilityLabel(Formatting.spokenRouteCodes(route, position: position))
                 Text(identity).font(.system(size: 13, weight: .medium)).padding(.top, 2)
             } else {
                 Text(identity).font(.system(size: 20, weight: .semibold))

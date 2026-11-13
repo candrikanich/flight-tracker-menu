@@ -33,6 +33,42 @@ extension Formatting {
         "\(route.origin.iata ?? route.origin.icao) → \(route.destination.iata ?? route.destination.icao)"
     }
 
+    /// "EWR → CLE · 350 mi to go · about halfway". A stale card passes no position: a frozen countdown
+    /// would read as live.
+    public static func routeCodes(_ route: Route, position: Coordinate?) -> String {
+        let progress = position.flatMap { tripProgress(route, position: $0) }
+        let parts = progress.map { [$0.miles + " mi to go", $0.stage].compactMap(\.self) } ?? []
+        return ([routeCodes(route)] + parts).joined(separator: " · ")
+    }
+
+    /// "EWR to CLE, 350 miles to go, about halfway": VoiceOver reads "→" as "right arrow" and "mi" as letters.
+    public static func spokenRouteCodes(_ route: Route, position: Coordinate?) -> String {
+        let codes = "\(route.origin.iata ?? route.origin.icao) to \(route.destination.iata ?? route.destination.icao)"
+        let progress = position.flatMap { tripProgress(route, position: $0) }
+        let parts = progress.map { [$0.miles + " miles to go", $0.stage].compactMap(\.self) } ?? []
+        return ([codes] + parts).joined(separator: ", ")
+    }
+
+    /// Below this the plane is all but down, and a countdown in the last miles would only twitch.
+    static let tripProgressFloorMiles = 25.0
+
+    /// Straight-line miles to the destination, in tens so the number holds still between checks. Progress is
+    /// along the great circle; the flown path is a little longer, which "about" covers.
+    static func tripProgress(_ route: Route, position: Coordinate) -> (miles: String, stage: String?)? {
+        let (origin, destination) = (route.origin.coordinate, route.destination.coordinate)
+        let remaining = Geo.distanceMiles(position, destination)
+        let total = Geo.distanceNauticalMiles(origin, destination)
+        guard remaining >= tripProgressFloorMiles, total > 0 else { return nil }
+        let tens = Int((remaining / 10).rounded()) * 10
+        let miles = tens.formatted(.number.grouping(.automatic).locale(usEnglish))
+        let fraction = Geo.alongTrackNauticalMiles(point: position, from: origin, to: destination) / total
+        switch fraction {
+        case 0.4...0.6: return (miles, "about halfway")
+        case 0.85...: return (miles, "nearly there")
+        default: return (miles, nil)
+        }
+    }
+
     /// "Southwest Airlines · WN4479". The full name stays; a short-name table would be one more thing to drift.
     public static func flightIdentity(callsign: String?, registration: String?, routeAirline: String?) -> String {
         flightName(callsign: callsign, registration: registration, routeAirline: routeAirline, separator: " · ")
